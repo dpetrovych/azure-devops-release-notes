@@ -1,0 +1,10 @@
+node_modules
+scripts/*.js
+typings
+dist
+build
+test
+.baseDir.ts
+js
+*.vsix
+file.tslint

@@ -1,0 +1,57 @@
+{
+ 	"manifestVersion": 1,
+ 	"id": "dbd-release-notes",
+ 	"publisher": "JabraDBD",
+ 	"version": "0.1.5",
+ 	"name": "Release Notes",
+ 	"description": "Release Notes extension",
+	"public": false,
+	"scopes": [
+			"vso.work",
+			"vso.code"
+	],
+	"icons": {
+		"default": "img/logo.png"
+	},
+	"content": {
+		"details": {
+		  "path": "overview.md"
+		},
+		"license": {
+		  "path": "license-terms.md"
+		}
+	  },
+ 	"categories": ["Azure Repos"],
+ 	"targets": [
+ 		{
+ 			"id": "Microsoft.VisualStudio.Services"
+ 		}
+ 	],
+ 	"contributions": [
+ 		{
+ 			"id": "release-notes-hub",
+ 			"type": "ms.vss-web.hub",
+ 			"targets": [
+ 				"ms.vss-code-web.code-hub-group"
+ 			],
+ 			"properties": {
+ 				"name": "Release Notes",
+				 "uri": "dist/release-notes-hub.html",
+				 "icon": {
+					  "light": "asset://img/icon_light.png",
+					  "dark": "asset://img/icon_dark.png"
+				  }
+ 			}
+ 		}
+ 	],
+ 	"files": [
+		{
+			"path": "dist",
+			"addressable": true
+		},
+		{
+				"path": "img",
+				"addressable": true
+		}
+ 	]
+ }
