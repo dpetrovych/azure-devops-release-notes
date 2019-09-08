@@ -2,7 +2,7 @@
  	"manifestVersion": 1,
  	"id": "dbd-release-notes",
  	"publisher": "JabraDBD",
- 	"version": "0.1.5",
+ 	"version": "0.1.24",
  	"name": "Release Notes",
  	"description": "Release Notes extension",
 	"public": false,
@@ -36,7 +36,7 @@
  			],
  			"properties": {
  				"name": "Release Notes",
-				 "uri": "dist/release-notes-hub.html",
+				 "uri": "static/release-notes-hub.html",
 				 "icon": {
 					  "light": "asset://img/icon_light.png",
 					  "dark": "asset://img/icon_dark.png"
@@ -50,8 +50,12 @@
 			"addressable": true
 		},
 		{
-				"path": "img",
-				"addressable": true
+			"path": "static",
+			"addressable": true
+		},
+		{
+			"path": "img",
+			"addressable": true
 		}
  	]
  }

@@ -1,7 +1,6 @@
 import { CachedValue } from "./data/CachedValue";
 
-export interface IContributionFilter {
-    allProjects: boolean;
+export interface IRepositoryFilter {
     repositories: {key: string; name: string}[];
 }
 
@@ -18,13 +17,12 @@ export function deepEqual(x, y): boolean {
       }, true) : (x === y);
 }
 
-export const defaultFilter: CachedValue<IContributionFilter> = new CachedValue(getDefaultFilter);
-async function getDefaultFilter(): Promise<IContributionFilter> {
+export const defaultFilter: CachedValue<IRepositoryFilter> = new CachedValue(getDefaultFilter);
+async function getDefaultFilter(): Promise<IRepositoryFilter> {
   //const defaultRepo = await defaultRepostory.getValue();
   const repositories: {key: string, name: string}[] = [];
 
-  const filter: IContributionFilter = {
-    allProjects: false,
+  const filter: IRepositoryFilter = {
     repositories,
   };
   return filter;

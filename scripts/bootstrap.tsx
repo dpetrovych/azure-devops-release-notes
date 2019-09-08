@@ -1,21 +1,19 @@
 import "es6-promise/auto";
-import * as React from "react";
-import * as ReactDOM from "react-dom";
 import * as SDK from "azure-devops-extension-sdk";
 
 import { IHostNavigationService, CommonServiceIds } from "azure-devops-extension-api";
-import { renderFilters } from "./controls/filters";
-import { defaultFilter, IContributionFilter } from "./filter";
+import { renderApp } from "./controls/app";
+import { defaultFilter, IRepositoryFilter } from "./filter";
 
 SDK.init();
 
 SDK.getService<IHostNavigationService>(CommonServiceIds.HostNavigationService).then(async (navService) => {
-    function updateHash(filter: IContributionFilter) {
+    function updateHash(filter: IRepositoryFilter) {
       const hash = encodeURIComponent(JSON.stringify(filter));
       navService.setHash(hash);
     }
 
-    async function parseHash(hash: string): Promise<IContributionFilter> {
+    async function parseHash(hash: string): Promise<IRepositoryFilter> {
       try {
         return JSON.parse(decodeURIComponent(hash));
       } catch (e) {
@@ -29,7 +27,7 @@ SDK.getService<IHostNavigationService>(CommonServiceIds.HostNavigationService).t
     async function updateFromHash(hash: string) {
       const filter = await parseHash(hash);
 
-      renderFilters(updateHash, filter, true);
+      renderApp(updateHash, filter, true);
     }
 
     const hash = await navService.getHash();
@@ -37,5 +35,6 @@ SDK.getService<IHostNavigationService>(CommonServiceIds.HostNavigationService).t
     navService.onHashChanged(updateFromHash);
 });
 
-SDK.register(SDK.getContributionId(), {});
-SDK.ready();
+SDK.ready().then(async () => {
+    SDK.register(SDK.getContributionId(), {});
+});

@@ -4,9 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "postinstall": "npm run package-dev",
-    "package-dev": "node ./node_modules/gulp/bin/gulp.js",
-    "package-release": "node ./node_modules/gulp/bin/gulp.js --release"
+    "build": "npm run lint && npm run clean && npm run webpack",
+    "webpack": "webpack --progress --colors --config webpack.config.js --output-path ./dist -p",
+    "postbuild": "npm run package",
+    "package": "tfx extension create --rev-version --manifest-globs ./vss-extension.json",
+    "gallery-publish": "tfx extension publish --rev-version",
+    "clean": "rimraf ./dist && rimraf ./*.vsix",
+    "lint": "tslint -c tslint.json 'src/*.ts'"
   },
   "keywords": [],
   "author": "",
@@ -14,21 +18,21 @@
   "devDependencies": {
     "@types/react": "^16.9.2",
     "@types/react-dom": "^16.9.0",
-    "del": "^5.0.0",
-    "gulp": "^4.0.2",
-    "gulp-inline": "^0.1.3",
-    "gulp-inline-source": "^4.0.0",
-    "gulp-sass": "^4.0.2",
-    "gulp-tslint": "^8.1.4",
-    "gulp-webpack": "^1.5.0",
+    "base64-inline-loader": "^1.1.1",
+    "css-loader": "^3.2.0",
+    "node-sass": "^4.12.0",
     "promise-polyfill": "^8.1.3",
     "requirejs": "^2.3.6",
+    "rimraf": "^3.0.0",
+    "sass-loader": "^7.3.1",
+    "style-loader": "^1.0.0",
     "ts-loader": "^6.0.4",
     "tslint": "^5.19.0",
     "typescript": "^3.5.3",
     "vss-web-extension-sdk": "^5.141.0",
     "webpack": "^4.39.2",
-    "webpack-cli": "^3.3.7"
+    "webpack-cli": "^3.3.7",
+    "webpack-dev-server": "^3.8.0"
   },
   "dependencies": {
     "azure-devops-extension-api": "^1.154.1",
