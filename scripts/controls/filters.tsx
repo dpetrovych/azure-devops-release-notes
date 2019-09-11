@@ -4,15 +4,12 @@ import { Dropdown } from "azure-devops-ui/Dropdown";
 import { Observer } from "azure-devops-ui/Observer";
 import { DropdownMultiSelection } from "azure-devops-ui/Utilities/DropdownSelection";
 
-import { IRepositoryFilter } from "../filter";
 import { GitRestClient } from "azure-devops-extension-api/Git";
 import * as API from "azure-devops-extension-api";
 import { IListBoxItem } from "azure-devops-ui/ListBox";
 
 export interface IFiltersProps {
-    onChanged: (filter: IRepositoryFilter) => void;
-    filter: IRepositoryFilter;
-    collapsible?: boolean;
+    filter: Promise<{ key: string; name: string }[]>;
 }
 
 interface IFiltersState {
@@ -29,24 +26,32 @@ export class Filters extends React.Component<IFiltersProps, IFiltersState> {
             repos: []
         };
 
-        this.selection.subscribe(this.onSelectedChanged);
+        API.getClient(GitRestClient).getRepositories()
+            .then(repos => {
+                var repositoryNames: IListBoxItem[] = repos.map(
+                    (x): IListBoxItem => (
+                        {
+                            id: x.id,
+                            text: x.name
+                        }));
 
-        let gitClient = API.getClient(GitRestClient);
-        gitClient.getRepositories().then(repos => {
-            var repositoryNames : IListBoxItem[] = repos.map(
-                (x) : IListBoxItem => (
-                    {
-                        id: x.id,
-                        text: x.name
-                    }));
+                this.setState({ repos: repositoryNames });
 
-            this.setState({ ...this.state, repos: repositoryNames });
-        });
+                props.filter.then(selectedRepos => {
+                    selectedRepos.forEach(srepo => {
+                        repositoryNames.forEach((r, i) => {
+                            if (r.id === srepo.key) {
+                                this.selection.select(i);
+                            }
+                        });
+                    });
+                });
+            });
     }
 
     render() {
         return (
-            <div style={{ margin: "8px" }}>
+            <div style={{ margin: "8px" }} className="flex-grow">
                 <Observer selection={this.selection}>
                     {() => {
                         return (
@@ -76,16 +81,12 @@ export class Filters extends React.Component<IFiltersProps, IFiltersState> {
         );
     }
 
-    private onSelectedChanged = () => {
+    getRepositories(): { key: string; name: string }[] {
         var selectedRepos = this.selection.value
             .map(x => this.state.repos.slice(x.beginIndex, x.endIndex + 1))
             .reduce((a, x) => a.concat(x), []);
 
-        console.log(`Filter.onSelectedChanged: selected repost ${selectedRepos.map(r => r.text).join(',')}`);
-        var filter: IRepositoryFilter = {
-            repositories : selectedRepos.map(s => ({ key: s.id, name: s.text || "" }))};
-
-        this.props.onChanged(filter);
+        return selectedRepos.map(s => ({ key: s.id, name: s.text || "" }));
     }
 }
 
