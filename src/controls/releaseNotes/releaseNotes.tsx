@@ -3,7 +3,6 @@ import * as React from "react";
 import { Card } from "azure-devops-ui/Card";
 import {
     CustomHeader,
-    HeaderDescription,
     HeaderIcon,
     HeaderTitle,
     HeaderTitleArea,
@@ -127,14 +126,15 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
                             <HeaderTitleArea>
                                 <HeaderTitleRow>
                                     <HeaderTitle className="text-ellipsis" titleSize={TitleSize.Medium}>
-                                        {this.pullRequests[this.state.pullRequestIndex].title}
+                                        {this.pullRequests[this.state.pullRequestIndex].title + " "}
+                                        <PillGroup className="pull-request-status">
+                                            <Pill size={PillSize.compact}>{this.pullRequests[this.state.pullRequestIndex].status}</Pill>
+                                        </PillGroup>
                                     </HeaderTitle>
                                 </HeaderTitleRow>
-                                <HeaderDescription>
-                                    <PillGroup>
-                                        <Pill size={PillSize.compact}>{this.pullRequests[this.state.pullRequestIndex].status}</Pill>
-                                    </PillGroup>
-                                </HeaderDescription>
+                                {/* <HeaderDescription>
+
+                                </HeaderDescription> */}
                             </HeaderTitleArea>
                             {/* <HeaderCommandBar items={commandBarItemsAdvanced} /> */}
                         </CustomHeader>
