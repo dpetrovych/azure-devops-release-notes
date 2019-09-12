@@ -1,0 +1,63 @@
+@import "../node_modules/azure-devops-ui/Core/_platformCommon.scss";
+
+.release-notes-card {
+    margin: 8px 16px 0px;
+}
+
+.issue-status {
+    text-align: center;
+    white-space: nowrap;
+    width: 230px;
+    vertical-align: baseline;
+    border-radius: 4px;
+    border: 1px solid;
+}
+
+.issue-status--resolved {
+    border-color: $status-info-foreground;
+    background-color: $status-info-background;
+}
+
+.issue-status--closed {
+    border-color: $status-success-foreground;
+    background-color: $status-success-background;
+}
+
+.issue-status--active {
+    border-color: $status-warning-foreground;
+    background-color: $status-warning-background;
+}
+
+.issue-status--new,
+.issue-status--removed {
+    border-color: $status-error-foreground;
+    background-color: $status-error-background;
+}
+
+.issue_icon {
+    font-family: "bowtie";
+}
+
+.issue_icon--user-story {
+    color: #0078d4;
+}
+
+.issue_icon--user-story:before {
+    content: "\eac7 ";
+}
+
+.issue_icon--bug {
+    color: #da0a00;
+}
+
+.issue_icon--bug:before {
+    content: "\eabc ";
+}
+
+.issue_icon--task {
+    color: #f2cb1d;
+}
+
+.issue_icon--task:before {
+    content: "\eabf ";
+}

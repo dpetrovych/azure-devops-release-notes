@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Filters } from "./filters";
-import { SettingsService, IPluginSettings } from "../data/settings";
+import { SettingsService, IPluginSettings } from "../../data/settings";
 
 interface ISettingsProps {
     settingsService: SettingsService;

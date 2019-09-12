@@ -7,7 +7,7 @@
         "jsx": "react",
         "sourceMap": false,
         "baseUrl": ".",
-        "rootDir": "./scripts",
+        "rootDir": "src",
         "strictNullChecks": true,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
