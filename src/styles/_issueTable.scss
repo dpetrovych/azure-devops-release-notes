@@ -1,0 +1,39 @@
+.issue-cell {
+    padding: 4px 12px;
+}
+
+.issue-cell-pill {
+    padding: 0px 12px;
+}
+
+.issue-cell-link {
+    padding: 0px 6px;
+}
+
+.issue_icon {
+    font-family: "bowtie";
+}
+
+.issue_icon--user-story {
+    color: #0078d4;
+}
+
+.issue_icon--user-story:before {
+    content: "\eac7 ";
+}
+
+.issue_icon--bug {
+    color: #da0a00;
+}
+
+.issue_icon--bug:before {
+    content: "\eabc ";
+}
+
+.issue_icon--task {
+    color: #f2cb1d;
+}
+
+.issue_icon--task:before {
+    content: "\eabf ";
+}

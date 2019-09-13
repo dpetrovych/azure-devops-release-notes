@@ -3,21 +3,31 @@ import { IdentityRef } from "azure-devops-extension-api/WebApi";
 import { WorkItemTrackingRestClient, WorkItemExpand, WorkItemErrorPolicy, WorkItem } from "azure-devops-extension-api/WorkItemTracking";
 import * as API from "azure-devops-extension-api";
 
-export interface PullRequestRef {
+export class ZeroPullRequestRef { }
+
+export class PullRequestRef {
     id: number;
     title: string;
     status: string;
     creationDate: Date;
     createdBy: IdentityRef;
+
+    constructor(fields?: Partial<PullRequestRef>) {
+        Object.assign(this, fields);
+    }
 }
 
-export interface Issue {
+export class Issue {
     href: string;
     id: number;
     type: string;
     title: string;
     tags: string[];
     status: string;
+
+    constructor(fields?: Partial<Issue>) {
+        Object.assign(this, fields);
+    }
 }
 
 const TOP_PULLREQUESTS = 10;
@@ -31,22 +41,24 @@ const getPullRequestStatus = (status: PullRequestStatus) => {
     }
 };
 
-const mapToPullRequestRef = (pr: GitPullRequest): PullRequestRef => ({
-    id: pr.pullRequestId,
-    title: pr.title,
-    status: getPullRequestStatus(pr.status),
-    creationDate: pr.creationDate,
-    createdBy: pr.createdBy
-});
+const mapToPullRequestRef = (pr: GitPullRequest): PullRequestRef =>
+    new PullRequestRef({
+        id: pr.pullRequestId,
+        title: pr.title,
+        status: getPullRequestStatus(pr.status),
+        creationDate: pr.creationDate,
+        createdBy: pr.createdBy
+    });
 
-const mapToReleaseNotesIssue = (wit: WorkItem): Issue => ({
-    id: wit.id,
-    href: (wit._links.html || { href: "#" }).href,
-    type: (<string | undefined>wit.fields["System.WorkItemType"]) || "",
-    title: (<string | undefined>wit.fields["System.Title"]) || "",
-    tags: ((<string | undefined>wit.fields["System.Tags"]) || "").split(';').map(x => x.trim()).filter(x => x !== ""),
-    status: (<string | undefined>wit.fields["System.State"] || "")
-});
+const mapToReleaseNotesIssue = (wit: WorkItem): Issue =>
+    new Issue({
+        id: wit.id,
+        href: (wit._links.html || { href: "#" }).href,
+        type: (<string | undefined>wit.fields["System.WorkItemType"]) || "",
+        title: (<string | undefined>wit.fields["System.Title"]) || "",
+        tags: ((<string | undefined>wit.fields["System.Tags"]) || "").split(';').map(x => x.trim()).filter(x => x !== ""),
+        status: (<string | undefined>wit.fields["System.State"] || "")
+    });
 
 export class ReleaseNotesService {
     async getTopPullRequests(repositoryId: string): Promise<PullRequestRef[]> {
@@ -85,7 +97,7 @@ export class ReleaseNotesService {
         return [...nonTaskWorkItems, ...taskParentWorkItems].map(mapToReleaseNotesIssue).sort((a, b) => a.id - b.id);
     }
 
-    private async getParentWorkItems(witClient: WorkItemTrackingRestClient, taskWorkItems: WorkItem[], excludeWorkItems:number[]): Promise<WorkItem[]> {
+    private async getParentWorkItems(witClient: WorkItemTrackingRestClient, taskWorkItems: WorkItem[], excludeWorkItems: number[]): Promise<WorkItem[]> {
         const parentIds: number[] = taskWorkItems
             .map(t => t.relations.find(x => x.rel === "System.LinkTypes.Hierarchy-Reverse"))
             .filter(parentRel => parentRel && parentRel.url)

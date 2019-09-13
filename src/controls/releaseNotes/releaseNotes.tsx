@@ -1,34 +1,22 @@
 import * as React from "react";
 
 import { Card } from "azure-devops-ui/Card";
-import {
-    CustomHeader,
-    HeaderIcon,
-    HeaderTitle,
-    HeaderDescription,
-    HeaderTitleArea,
-    HeaderTitleRow,
-    TitleSize
-} from "azure-devops-ui/Header";
-import { VssPersona, IIdentityDetailsProvider } from "azure-devops-ui/VssPersona";
 import { Table } from "azure-devops-ui/Table";
 import { ObservableArray, ObservableValue } from "azure-devops-ui/Core/Observable";
-import { Pill, PillSize } from "azure-devops-ui/Pill";
-import { PillGroup } from "azure-devops-ui/PillGroup";
-import { Ago } from "azure-devops-ui/Ago";
-import { AgoFormat } from "azure-devops-ui/Utilities/Date";
 
 import { RepositoryRef } from "../../data/repository";
-import { ReleaseNotesService, Issue, PullRequestRef } from "../../data/releaseNotes";
+import { ReleaseNotesService, Issue, PullRequestRef, ZeroPullRequestRef } from "../../data/releaseNotes";
 import { ITableItem, issueColumns } from "./issueTable";
+import { ReleaseHeader } from "./releaseHeader";
+
 
 interface IReleaseNotesProps {
     repostitory: RepositoryRef;
 }
 
 interface IReleaseNotesState {
-    pullRequestIndex: number | null;
-    pullRequest: PullRequestRef | null;
+    pullRequestIndex: number | undefined;
+    pullRequest: PullRequestRef | ZeroPullRequestRef | undefined;
 }
 
 const issueToTableItem = (issue: Issue): ITableItem => {
@@ -46,14 +34,6 @@ const issueToTableItem = (issue: Issue): ITableItem => {
     };
 };
 
-const pullRequestIdentity = (pr: PullRequestRef): IIdentityDetailsProvider | undefined => {
-    return {
-        getDisplayName: () => (pr.createdBy.displayName),
-        getIdentityImageUrl: () => (pr.createdBy.imageUrl)
-    };
-};
-
-
 export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNotesState> {
     private service = new ReleaseNotesService();
     private pullRequests: PullRequestRef[];
@@ -62,8 +42,8 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
     constructor(props: Readonly<IReleaseNotesProps>) {
         super(props);
         this.state = {
-            pullRequestIndex: null,
-            pullRequest: null
+            pullRequestIndex: undefined,
+            pullRequest: undefined
         };
     }
 
@@ -80,36 +60,15 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
     render() {
         return (
             <Card className="release-notes-card" titleProps={{ text: this.props.repostitory.name }}>
-                {(this.state.pullRequest !== null) &&
+                {this.state.pullRequest &&
                     (<div>
-                        <CustomHeader className="bolt-header-with-commandbar">
-                            <HeaderIcon
-                                className="bolt-table-status-icon-large"
-                                iconProps={{ iconName: "OpenSource" }}
-                                titleSize={TitleSize.Medium}
-                            />
-                            <HeaderTitleArea>
-                                <HeaderTitleRow>
-                                    <HeaderTitle className="text-ellipsis" titleSize={TitleSize.Medium}>
-                                        {this.state.pullRequest.title + " "}
-                                        <PillGroup className="pull-request-status">
-                                            <Pill size={PillSize.compact}>{this.state.pullRequest.status}</Pill>
-                                        </PillGroup>
-                                    </HeaderTitle>
-                                </HeaderTitleRow>
-                                <HeaderDescription>
-                                    <VssPersona identityDetailsProvider={pullRequestIdentity(this.state.pullRequest)} size={"small"} className={"persona-inline"} />
-                                    {this.state.pullRequest.createdBy.displayName + ", "}
-                                    <Ago date={this.state.pullRequest.creationDate} format={AgoFormat.Compact} />
-                                </HeaderDescription>
-                            </HeaderTitleArea>
-                            {/* <HeaderCommandBar items={commandBarItemsAdvanced} /> */}
-                        </CustomHeader>
-                        <Table<Partial<ITableItem>>
+                        <ReleaseHeader pullRequest={this.state.pullRequest}/>
+                        {(this.state.pullRequest instanceof PullRequestRef) && (
+                            <Table<Partial<ITableItem>>
                             columns={issueColumns}
                             itemProvider={this.itemProvider}
                             showLines={false}
-                        />
+                        />)}
                     </div>)
                 }
             </Card>
@@ -117,12 +76,19 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
     }
 
     private async initialize() {
-        this.setState({ pullRequestIndex: null });
+        this.setState({ pullRequestIndex: undefined });
         this.pullRequests = await this.service.getTopPullRequests(this.props.repostitory.id);
 
-        var currentPullRequest = this.pullRequests[0];
-        this.setState({ pullRequestIndex: 0, pullRequest: currentPullRequest });
-        await this.initializeNotes(currentPullRequest.id);
+        var hasPullRequests = this.pullRequests && this.pullRequests.length > 0;
+
+        this.setState({
+            pullRequestIndex: 0,
+            pullRequest: hasPullRequests ? this.pullRequests[0] : new ZeroPullRequestRef()
+        });
+
+        if (hasPullRequests) {
+            await this.initializeNotes(this.pullRequests[0].id);
+        }
     }
 
     private async initializeNotes(pullRequestId: number) {

@@ -56,8 +56,8 @@ class App extends React.Component<{}, IAppState> {
     }
 
     render() {
-        const onEmailDialogDismiss = () => this.setState({emailDialogOpen: false});
-        const onSettinsDismiss = () => this.setState({settingsExpanded: false});
+        const onEmailDialogDismiss = () => this.setState({ emailDialogOpen: false });
+        const onSettinsDismiss = () => this.setState({ settingsExpanded: false });
 
         return (
             <Page className="flex-grow">
@@ -87,9 +87,7 @@ class App extends React.Component<{}, IAppState> {
                         footerButtonProps={[
                             {
                                 text: "Copy Content",
-                                iconProps:{
-                                    iconName: "Copy"
-                                },
+                                iconProps: { iconName: "Copy" },
                                 onClick: copyEmailTemplate,
                                 primary: true
                             },
@@ -110,23 +108,19 @@ class App extends React.Component<{}, IAppState> {
     private renderCards() {
         if (this.state.repositories.length === 0) {
             return <ZeroData
-                primaryText="Hey, thanks for checking"
-                secondaryText={
-                    <span>
-                        I'm still developing the plugin. Go ahead and select some project from a dropdown above to see if it works.
-                    </span>
-                }
+                primaryText="No projects selected for release notes"
+                secondaryText="Use settins to select projects to be dispalayed."
                 imageAltText="logo"
-                imagePath={"../img/zerodata.png"}
+                imagePath="../img/zerodata.png"
                 actionText="Select projects"
                 actionType={ZeroDataActionType.ctaButton}
                 onActionClick={() => this.setState({ settingsExpanded: true })}
             />;
         }
 
-        return <div>
+        return <div className="release-notes-container">
             {this.state.repositories.map((repo: RepositoryRef) => {
-                return (<ReleaseNotes repostitory={repo} />);
+                return (<ReleaseNotes repostitory={repo} key={repo.id} />);
             })}
         </div>;
     }

@@ -25,7 +25,7 @@ function renderCell(columnIndex: number, tableColumn: ITableColumn<ITableItem>, 
 }
 
 export function renderCode(_rowIndex: number, columnIndex: number, tableColumn: ITableColumn<ITableItem>, tableItem: ITableItem): JSX.Element {
-    return renderCell(columnIndex, tableColumn, "release-note-issue-cell-link", (
+    return renderCell(columnIndex, tableColumn, "issue-cell-link", (
         <Link href={tableItem.code.href} subtle={true}>
             <Icon {...tableItem.code.iconProps} />{" " + tableItem.code.text}
         </Link>
@@ -33,11 +33,11 @@ export function renderCode(_rowIndex: number, columnIndex: number, tableColumn: 
 }
 
 function renderTitle(_rowIndex: number, columnIndex: number, tableColumn: ITableColumn<ITableItem>, tableItem: ITableItem): JSX.Element {
-    return renderCell(columnIndex, tableColumn, "release-note-issue-cell", tableItem.title);
+    return renderCell(columnIndex, tableColumn, "issue-cell", tableItem.title);
 }
 
 function renderTags(_rowIndex: number, columnIndex: number, tableColumn: ITableColumn<ITableItem>, tableItem: ITableItem): JSX.Element {
-    return renderCell(columnIndex, tableColumn, "release-note-issue-cell-pill", (
+    return renderCell(columnIndex, tableColumn, "issue-cell-pill", (
         <PillGroup className="flex-row" overflow={PillGroupOverflow.fade}>
             {tableItem.tags!.map(t => (<Pill size={PillSize.compact}>{t}</Pill>))}
         </PillGroup>
@@ -45,7 +45,7 @@ function renderTags(_rowIndex: number, columnIndex: number, tableColumn: ITableC
 }
 
 function renderIssueStatus(_rowIndex: number, columnIndex: number, tableColumn: ITableColumn<ITableItem>, tableItem: ITableItem): JSX.Element {
-    return renderCell(columnIndex, tableColumn, "release-note-issue-cell-pill", (<IssueStatus status={tableItem.status} />));
+    return renderCell(columnIndex, tableColumn, "issue-cell-pill", (<IssueStatus status={tableItem.status} />));
 }
 
 function onSizeSizable(_: MouseEvent, index: number, width: number) {
