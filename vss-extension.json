@@ -2,7 +2,7 @@
  	"manifestVersion": 1,
  	"id": "dbd-release-notes",
  	"publisher": "JabraDBD",
- 	"version": "0.1.65",
+ 	"version": "0.1.68",
  	"name": "Release Notes",
  	"description": "Release Notes extension",
 	"public": false,
