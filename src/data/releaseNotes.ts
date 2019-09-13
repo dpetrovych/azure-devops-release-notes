@@ -2,6 +2,7 @@
 //import { CommonServiceIds, IProjectPageService, IExtensionDataManager, IExtensionDataService, Ser } from "azure-devops-extension-api";
 
 import { GitRestClient, PullRequestStatus } from "azure-devops-extension-api/Git";
+import { IdentityRef } from "azure-devops-extension-api/WebApi";
 import { WorkItemTrackingRestClient, WorkItemExpand, WorkItemErrorPolicy } from "azure-devops-extension-api/WorkItemTracking";
 import * as API from "azure-devops-extension-api";
 
@@ -14,6 +15,8 @@ export interface PullRequestRef {
     id: number;
     title: string;
     status: string;
+    creationDate: Date;
+    createdBy: IdentityRef;
 }
 
 export interface ReleaseNotesIssue {
@@ -46,7 +49,9 @@ export class ReleaseNotesService {
         return pullRequests.map(pr => ({
             id: pr.pullRequestId,
             title: pr.title,
-            status: this.getPullRequestStatus(pr.status)
+            status: this.getPullRequestStatus(pr.status),
+            creationDate: pr.creationDate,
+            createdBy: pr.createdBy
         }));
     }
 

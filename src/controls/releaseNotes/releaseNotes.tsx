@@ -5,20 +5,22 @@ import {
     CustomHeader,
     HeaderIcon,
     HeaderTitle,
+    HeaderDescription,
     HeaderTitleArea,
     HeaderTitleRow,
     TitleSize
 } from "azure-devops-ui/Header";
-
-import { renderSimpleCell, Table, ITableColumn, SimpleTableCell } from "azure-devops-ui/Table";
+import { VssPersona, IIdentityDetailsProvider } from "azure-devops-ui/VssPersona";
+import { Table } from "azure-devops-ui/Table";
 import { ObservableArray, ObservableValue } from "azure-devops-ui/Core/Observable";
-import { ISimpleListCell } from "azure-devops-ui/List";
 import { Pill, PillSize } from "azure-devops-ui/Pill";
-import { PillGroup, PillGroupOverflow } from "azure-devops-ui/PillGroup";
+import { PillGroup } from "azure-devops-ui/PillGroup";
+import { Ago } from "azure-devops-ui/Ago";
+import { AgoFormat } from "azure-devops-ui/Utilities/Date";
 
 import { RepositoryRef } from "../../data/repository";
 import { ReleaseNotesService, ReleaseNotesIssue, PullRequestRef } from "../../data/releaseNotes";
-import { IssueStatus } from "./issueStatus";
+import { ITableItem, issueColumns } from "./issueTable";
 
 interface IReleaseNotesProps {
     repostitory: RepositoryRef;
@@ -26,69 +28,8 @@ interface IReleaseNotesProps {
 
 interface IReleaseNotesState {
     pullRequestIndex: number | null;
+    pullRequest: PullRequestRef | null;
 }
-
-interface ITableItem {
-    code: ISimpleListCell;
-    title: string;
-    tags?: string[];
-    status: string;
-}
-
-function onSizeSizable(_: MouseEvent, index: number, width: number) {
-    (sizableColumns[index].width as ObservableValue<number>).value = width;
-}
-
-function renderIssueStatus(_rowIndex: number, columnIndex: number, tableColumn: ITableColumn<ITableItem>, tableItem: ITableItem): JSX.Element {
-    return (
-        <SimpleTableCell columnIndex={columnIndex} tableColumn={tableColumn} key={"col-" + columnIndex}>
-            <IssueStatus status={tableItem.status} />
-        </SimpleTableCell>
-    );
-}
-
-function renderTags(_rowIndex: number, columnIndex: number, tableColumn: ITableColumn<ITableItem>, tableItem: ITableItem): JSX.Element {
-    return (
-        <SimpleTableCell columnIndex={columnIndex} tableColumn={tableColumn} key={"col-" + columnIndex}>
-            <PillGroup className="flex-row" overflow={PillGroupOverflow.fade}>
-                {tableItem.tags!.map(t => (<Pill>{t}</Pill>))}
-            </PillGroup>
-        </SimpleTableCell>
-    );
-}
-
-const sizableColumns = [
-    {
-        id: "code",
-        name: "Code",
-        minWidth: 100,
-        width: new ObservableValue(100),
-        renderCell: renderSimpleCell,
-        onSize: onSizeSizable
-    },
-    {
-        id: "title",
-        name: "Title",
-        width: -100,
-        renderCell: renderSimpleCell,
-    },
-    {
-        id: "tags",
-        name: "Tags",
-        minWidth: 100,
-        width: new ObservableValue(200),
-        renderCell: renderTags,
-        onSize: onSizeSizable
-    },
-    {
-        id: "status",
-        name: "Status",
-        minWidth: 100,
-        width: new ObservableValue(100),
-        renderCell: renderIssueStatus,
-        onSize: onSizeSizable
-    }
-];
 
 export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNotesState> {
     private service = new ReleaseNotesService();
@@ -98,7 +39,8 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
     constructor(props: Readonly<IReleaseNotesProps>) {
         super(props);
         this.state = {
-            pullRequestIndex: null
+            pullRequestIndex: null,
+            pullRequest: null
         };
     }
 
@@ -115,32 +57,35 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
     render() {
         return (
             <Card className="release-notes-card" titleProps={{ text: this.props.repostitory.name }}>
-                {(this.state.pullRequestIndex !== null) &&
+                {(this.state.pullRequest !== null) &&
                     (<div>
                         <CustomHeader className="bolt-header-with-commandbar">
                             <HeaderIcon
                                 className="bolt-table-status-icon-large"
-                                iconProps={{ iconName: "OpenSource"}}
+                                iconProps={{ iconName: "OpenSource" }}
                                 titleSize={TitleSize.Medium}
                             />
                             <HeaderTitleArea>
                                 <HeaderTitleRow>
                                     <HeaderTitle className="text-ellipsis" titleSize={TitleSize.Medium}>
-                                        {this.pullRequests[this.state.pullRequestIndex].title + " "}
+                                        {this.state.pullRequest.title + " "}
                                         <PillGroup className="pull-request-status">
-                                            <Pill size={PillSize.compact}>{this.pullRequests[this.state.pullRequestIndex].status}</Pill>
+                                            <Pill size={PillSize.compact}>{this.state.pullRequest.status}</Pill>
                                         </PillGroup>
                                     </HeaderTitle>
                                 </HeaderTitleRow>
-                                {/* <HeaderDescription>
-
-                                </HeaderDescription> */}
+                                <HeaderDescription>
+                                    <VssPersona identityDetailsProvider={this.currentPullRequestIdentity(this.state.pullRequest)} size={"small"} className={"persona-inline"} />
+                                    {this.state.pullRequest.createdBy.displayName + ", "}
+                                    <Ago date={this.state.pullRequest.creationDate} format={AgoFormat.Compact} />
+                                </HeaderDescription>
                             </HeaderTitleArea>
                             {/* <HeaderCommandBar items={commandBarItemsAdvanced} /> */}
                         </CustomHeader>
                         <Table<Partial<ITableItem>>
-                            columns={sizableColumns}
+                            columns={issueColumns}
                             itemProvider={this.itemProvider}
+                            showLines={false}
                         />
                     </div>)
                 }
@@ -152,8 +97,9 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
         this.setState({ pullRequestIndex: null });
         this.pullRequests = await this.service.getTopPullRequests(this.props.repostitory.id);
 
-        this.setState({ pullRequestIndex: 0 });
-        await this.initializeNotes(this.pullRequests[0].id);
+        var currentPullRequest = this.pullRequests[0];
+        this.setState({ pullRequestIndex: 0, pullRequest: currentPullRequest });
+        await this.initializeNotes(currentPullRequest.id);
     }
 
     private async initializeNotes(pullRequestId: number) {
@@ -178,6 +124,13 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
             title: issue.title,
             tags: issue.tags,
             status: issue.status
+        };
+    }
+
+    currentPullRequestIdentity(pr: PullRequestRef): IIdentityDetailsProvider | undefined {
+        return {
+            getDisplayName: () => (pr.createdBy.displayName),
+            getIdentityImageUrl: () => (pr.createdBy.imageUrl)
         };
     }
 }
