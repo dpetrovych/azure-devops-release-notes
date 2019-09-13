@@ -19,7 +19,7 @@ import { Ago } from "azure-devops-ui/Ago";
 import { AgoFormat } from "azure-devops-ui/Utilities/Date";
 
 import { RepositoryRef } from "../../data/repository";
-import { ReleaseNotesService, ReleaseNotesIssue, PullRequestRef } from "../../data/releaseNotes";
+import { ReleaseNotesService, Issue, PullRequestRef } from "../../data/releaseNotes";
 import { ITableItem, issueColumns } from "./issueTable";
 
 interface IReleaseNotesProps {
@@ -30,6 +30,29 @@ interface IReleaseNotesState {
     pullRequestIndex: number | null;
     pullRequest: PullRequestRef | null;
 }
+
+const issueToTableItem = (issue: Issue): ITableItem => {
+    var issueIconModificator = issue.type.toLowerCase().replace(/\s/g, "-");
+
+    return {
+        code: {
+            iconProps: { className: `issue_icon issue_icon--${issueIconModificator}` },
+            text: issue.id.toString(),
+            href: issue.href
+        },
+        title: issue.title,
+        tags: issue.tags,
+        status: issue.status
+    };
+};
+
+const pullRequestIdentity = (pr: PullRequestRef): IIdentityDetailsProvider | undefined => {
+    return {
+        getDisplayName: () => (pr.createdBy.displayName),
+        getIdentityImageUrl: () => (pr.createdBy.imageUrl)
+    };
+};
+
 
 export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNotesState> {
     private service = new ReleaseNotesService();
@@ -75,7 +98,7 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
                                     </HeaderTitle>
                                 </HeaderTitleRow>
                                 <HeaderDescription>
-                                    <VssPersona identityDetailsProvider={this.currentPullRequestIdentity(this.state.pullRequest)} size={"small"} className={"persona-inline"} />
+                                    <VssPersona identityDetailsProvider={pullRequestIdentity(this.state.pullRequest)} size={"small"} className={"persona-inline"} />
                                     {this.state.pullRequest.createdBy.displayName + ", "}
                                     <Ago date={this.state.pullRequest.creationDate} format={AgoFormat.Compact} />
                                 </HeaderDescription>
@@ -109,28 +132,6 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
         var notes = await this.service.getReleaseNotes(this.props.repostitory.id, pullRequestId);
 
         this.itemProvider.removeAll();
-        this.itemProvider.push(...notes.map(x => this.issueToRow(x)));
-    }
-
-    private issueToRow(issue: ReleaseNotesIssue): ITableItem {
-        var issueIconModificator = issue.type.toLowerCase().replace(/\s/g, "-");
-
-        return {
-            code: {
-                iconProps: { className: `issue_icon issue_icon--${issueIconModificator}` },
-                text: issue.id.toString(),
-                href: issue.href
-            },
-            title: issue.title,
-            tags: issue.tags,
-            status: issue.status
-        };
-    }
-
-    currentPullRequestIdentity(pr: PullRequestRef): IIdentityDetailsProvider | undefined {
-        return {
-            getDisplayName: () => (pr.createdBy.displayName),
-            getIdentityImageUrl: () => (pr.createdBy.imageUrl)
-        };
+        this.itemProvider.push(...notes.map(x => issueToTableItem(x)));
     }
 }

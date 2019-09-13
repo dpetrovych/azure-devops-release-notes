@@ -1,15 +1,7 @@
-//import * as SDK from "azure-devops-extension-sdk";
-//import { CommonServiceIds, IProjectPageService, IExtensionDataManager, IExtensionDataService, Ser } from "azure-devops-extension-api";
-
-import { GitRestClient, PullRequestStatus } from "azure-devops-extension-api/Git";
+import { GitRestClient, PullRequestStatus, GitPullRequest } from "azure-devops-extension-api/Git";
 import { IdentityRef } from "azure-devops-extension-api/WebApi";
-import { WorkItemTrackingRestClient, WorkItemExpand, WorkItemErrorPolicy } from "azure-devops-extension-api/WorkItemTracking";
+import { WorkItemTrackingRestClient, WorkItemExpand, WorkItemErrorPolicy, WorkItem } from "azure-devops-extension-api/WorkItemTracking";
 import * as API from "azure-devops-extension-api";
-
-export enum IssueType {
-    UserStory,
-    Defect
-}
 
 export interface PullRequestRef {
     id: number;
@@ -19,7 +11,7 @@ export interface PullRequestRef {
     createdBy: IdentityRef;
 }
 
-export interface ReleaseNotesIssue {
+export interface Issue {
     href: string;
     id: number;
     type: string;
@@ -30,6 +22,32 @@ export interface ReleaseNotesIssue {
 
 const TOP_PULLREQUESTS = 10;
 
+const getPullRequestStatus = (status: PullRequestStatus) => {
+    switch (status) {
+        case PullRequestStatus.Active: return "Active";
+        case PullRequestStatus.Completed: return "Completed";
+        case PullRequestStatus.Abandoned: return "Abandoned";
+        default: return "";
+    }
+};
+
+const mapToPullRequestRef = (pr: GitPullRequest): PullRequestRef => ({
+    id: pr.pullRequestId,
+    title: pr.title,
+    status: getPullRequestStatus(pr.status),
+    creationDate: pr.creationDate,
+    createdBy: pr.createdBy
+});
+
+const mapToReleaseNotesIssue = (wit: WorkItem): Issue => ({
+    id: wit.id,
+    href: (wit._links.html || { href: "#" }).href,
+    type: (<string | undefined>wit.fields["System.WorkItemType"]) || "",
+    title: (<string | undefined>wit.fields["System.Title"]) || "",
+    tags: ((<string | undefined>wit.fields["System.Tags"]) || "").split(';').map(x => x.trim()).filter(x => x !== ""),
+    status: (<string | undefined>wit.fields["System.State"] || "")
+});
+
 export class ReleaseNotesService {
     async getTopPullRequests(repositoryId: string): Promise<PullRequestRef[]> {
         var gitClient = API.getClient(GitRestClient);
@@ -38,47 +56,54 @@ export class ReleaseNotesService {
             {
                 targetRefName: "refs/heads/master",
                 status: PullRequestStatus.All,
-                creatorId: "",
                 repositoryId: repositoryId,
+                creatorId: "",
                 includeLinks: false,
                 reviewerId: "",
                 sourceRefName: "",
                 sourceRepositoryId: ""
             }, undefined, undefined, 0, TOP_PULLREQUESTS);
 
-        return pullRequests.map(pr => ({
-            id: pr.pullRequestId,
-            title: pr.title,
-            status: this.getPullRequestStatus(pr.status),
-            creationDate: pr.creationDate,
-            createdBy: pr.createdBy
-        }));
+        return pullRequests.map(mapToPullRequestRef);
     }
 
-    async getReleaseNotes(repositoryId: string, pullRequestId: number): Promise<ReleaseNotesIssue[]> {
-        var gitClient = API.getClient(GitRestClient);
+    async getReleaseNotes(repositoryId: string, pullRequestId: number): Promise<Issue[]> {
+        const gitClient = API.getClient(GitRestClient);
+        const witClient = API.getClient(WorkItemTrackingRestClient);
 
-        var prWorkItems = await this.getPullRequestWorkItems(gitClient, repositoryId, pullRequestId);
-        var commentsWorkItems = await this.getCommentsWorkItems(gitClient, repositoryId, pullRequestId);
-        var workItemsIds = [...prWorkItems, ...commentsWorkItems].filter((v, i, a) => a.indexOf(v) === i);
+        const prWorkItems = await this.getPullRequestWorkItems(gitClient, repositoryId, pullRequestId);
+        const commentsWorkItems = await this.getCommentsWorkItems(gitClient, repositoryId, pullRequestId);
+        const workItemsIds = [...prWorkItems, ...commentsWorkItems].filter((v, i, a) => a.indexOf(v) === i);
 
-        var witClient = API.getClient(WorkItemTrackingRestClient);
-        var workItems = await witClient.getWorkItemsBatch({
+        const workItems = await this.getWorkItems(witClient, workItemsIds);
+
+        const isTask = (wit: WorkItem): boolean => wit.fields["System.WorkItemType"] === "Task";
+        const nonTaskWorkItems = workItems.filter(x => !isTask(x));
+        const taskWorkItems = workItems.filter(x => isTask(x));
+        const taskParentWorkItems = await this.getParentWorkItems(witClient, taskWorkItems, nonTaskWorkItems.map(x => x.id));
+
+        return [...nonTaskWorkItems, ...taskParentWorkItems].map(mapToReleaseNotesIssue).sort((a, b) => a.id - b.id);
+    }
+
+    private async getParentWorkItems(witClient: WorkItemTrackingRestClient, taskWorkItems: WorkItem[], excludeWorkItems:number[]): Promise<WorkItem[]> {
+        const parentIds: number[] = taskWorkItems
+            .map(t => t.relations.find(x => x.rel === "System.LinkTypes.Hierarchy-Reverse"))
+            .filter(parentRel => parentRel && parentRel.url)
+            .map(parentRel => Number(parentRel!.url.split('/').pop()))
+            .filter(parentId => excludeWorkItems.findIndex(x => x === parentId) === -1);
+
+        if (parentIds.length === 0) { return []; }
+        return await this.getWorkItems(witClient, parentIds);
+    }
+
+    private getWorkItems(witClient: WorkItemTrackingRestClient, workItemsIds: number[]): Promise<WorkItem[]> {
+        return witClient.getWorkItemsBatch({
             $expand: WorkItemExpand.All,
             ids: workItemsIds,
             errorPolicy: WorkItemErrorPolicy.Omit,
             asOf: <Date><any>undefined,
             fields: <string[]><any>undefined
         });
-
-        return workItems.map(x => ({
-            id: x.id,
-            href: (x._links.html || { href: "#" }).href,
-            type: (<string | undefined>x.fields["System.WorkItemType"]) || "",
-            title: (<string | undefined>x.fields["System.Title"]) || "",
-            tags: ((<string | undefined>x.fields["System.Tags"]) || "").split(';').map(x => x.trim()).filter(x => x !== ""),
-            status: (<string | undefined>x.fields["System.State"] || "")
-        }));
     }
 
     private async getPullRequestWorkItems(gitClient: GitRestClient, repositoryId: string, pullRequestId: number): Promise<number[]> {
@@ -93,15 +118,5 @@ export class ReleaseNotesService {
             var match = /\b#[0-9]+\b/.exec(c.comment);
             return match ? match.map(x => Number(x)) : [];
         }).reduce((c, a) => c.concat(a), []);
-    }
-
-
-    private getPullRequestStatus(status: PullRequestStatus) {
-        switch (status) {
-            case PullRequestStatus.Active: return "Active";
-            case PullRequestStatus.Completed: return "Completed";
-            case PullRequestStatus.Abandoned: return "Abandoned";
-            default: return "";
-        }
     }
 }
