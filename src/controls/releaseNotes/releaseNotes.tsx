@@ -5,9 +5,11 @@ import { Table } from "azure-devops-ui/Table";
 import { ObservableArray, ObservableValue } from "azure-devops-ui/Core/Observable";
 
 import { RepositoryRef } from "../../data/repository";
+import { Release } from "../../data/app";
 import { ReleaseNotesService, Issue, PullRequestRef, ZeroPullRequestRef } from "../../data/releaseNotes";
 import { ITableItem, issueColumns } from "./issueTable";
 import { ReleaseHeader } from "./releaseHeader";
+import { modificator } from "../helper/bem";
 
 
 interface IReleaseNotesProps {
@@ -20,11 +22,9 @@ interface IReleaseNotesState {
 }
 
 const issueToTableItem = (issue: Issue): ITableItem => {
-    var issueIconModificator = issue.type.toLowerCase().replace(/\s/g, "-");
-
     return {
         code: {
-            iconProps: { className: `issue_icon issue_icon--${issueIconModificator}` },
+            iconProps: { className: `issue_icon issue_icon--${modificator(issue.type)}` },
             text: issue.id.toString(),
             href: issue.href
         },
@@ -37,7 +37,9 @@ const issueToTableItem = (issue: Issue): ITableItem => {
 export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNotesState> {
     private service = new ReleaseNotesService();
     private pullRequests: PullRequestRef[];
+    private header: ReleaseHeader | null;
     private itemProvider = new ObservableArray<ITableItem | ObservableValue<ITableItem | undefined>>();
+    private issues: Issue[] = [];
 
     constructor(props: Readonly<IReleaseNotesProps>) {
         super(props);
@@ -62,7 +64,7 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
             <Card className="release-notes-card" titleProps={{ text: this.props.repostitory.name }}>
                 {this.state.pullRequest &&
                     (<div>
-                        <ReleaseHeader pullRequest={this.state.pullRequest}/>
+                        <ReleaseHeader pullRequest={this.state.pullRequest} ref={r => this.header = r}/>
                         {(this.state.pullRequest instanceof PullRequestRef) && (
                             <Table<Partial<ITableItem>>
                             columns={issueColumns}
@@ -73,6 +75,14 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
                 }
             </Card>
         );
+    }
+
+    getRelease(): Release | null {
+        if (this.state.pullRequest === undefined || this.state.pullRequest instanceof ZeroPullRequestRef) {
+            return null;
+        }
+
+        return new Release(this.props.repostitory, this.state.pullRequest, this.issues, this.header!.getReleaseDate());
     }
 
     private async initialize() {
@@ -93,11 +103,11 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
 
     private async initializeNotes(pullRequestId: number) {
         this.itemProvider.removeAll();
-        this.itemProvider.push(...new Array(5).fill(new ObservableValue<ITableItem | undefined>(undefined)));
+        this.itemProvider.push(...new Array(3).fill(new ObservableValue<ITableItem | undefined>(undefined)));
 
-        var notes = await this.service.getReleaseNotes(this.props.repostitory.id, pullRequestId);
+        this.issues = await this.service.getReleaseNotes(this.props.repostitory.id, pullRequestId);
 
         this.itemProvider.removeAll();
-        this.itemProvider.push(...notes.map(x => issueToTableItem(x)));
+        this.itemProvider.push(...this.issues.map(x => issueToTableItem(x)));
     }
 }

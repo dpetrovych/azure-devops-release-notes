@@ -9,17 +9,25 @@ import {
     HeaderTitleRow,
     TitleSize
 } from "azure-devops-ui/Header";
-
+import { HeaderCommandBar, IHeaderCommandBarItem } from "azure-devops-ui/HeaderCommandBar";
 import { Pill, PillSize } from "azure-devops-ui/Pill";
 import { PillGroup } from "azure-devops-ui/PillGroup";
+import { Dialog } from "azure-devops-ui/Dialog";
 import { Ago } from "azure-devops-ui/Ago";
 import { AgoFormat } from "azure-devops-ui/Utilities/Date";
 import { VssPersona, IIdentityDetailsProvider } from "azure-devops-ui/VssPersona";
 
 import { PullRequestRef, ZeroPullRequestRef } from "../../data/releaseNotes";
+import { DateTimePicker } from "./dateTimePicker";
+import moment = require("moment");
 
 interface IReleaseHeaderProps {
     pullRequest: PullRequestRef | ZeroPullRequestRef;
+}
+
+interface IReleaseHeaderState {
+    releaseDate?: Date;
+    openTimeDialog: boolean;
 }
 
 const pullRequestIdentity = (pr: PullRequestRef): IIdentityDetailsProvider | undefined => {
@@ -29,9 +37,14 @@ const pullRequestIdentity = (pr: PullRequestRef): IIdentityDetailsProvider | und
     };
 };
 
-export class ReleaseHeader extends React.PureComponent<IReleaseHeaderProps> {
+export class ReleaseHeader extends React.PureComponent<IReleaseHeaderProps, IReleaseHeaderState> {
+    public releaseDatePicker: DateTimePicker | null;
+
     constructor(props) {
         super(props);
+        this.state = {
+            openTimeDialog: false
+        };
     }
 
     render() {
@@ -40,34 +53,79 @@ export class ReleaseHeader extends React.PureComponent<IReleaseHeaderProps> {
         }
 
         return this.renderHeader(
-            (<span>
-                {this.props.pullRequest.title + " "}
-                <PillGroup className="pull-request-status">
+            (<React.Fragment>
+                <span className="release-title">{this.props.pullRequest.title}</span>
+                <PillGroup className="release-status">
                     <Pill size={PillSize.compact}>{this.props.pullRequest.status}</Pill>
                 </PillGroup>
-            </span>),
-            (<span>
-                <VssPersona identityDetailsProvider={pullRequestIdentity(this.props.pullRequest)} size={"small"} className={"persona-inline"} />
-                {this.props.pullRequest.createdBy.displayName + ", "}
+            </React.Fragment>),
+            (<React.Fragment>
+                <VssPersona identityDetailsProvider={pullRequestIdentity(this.props.pullRequest)} size={"small"} className="release-author_persona" />
+                <span className="release-author_name">{this.props.pullRequest.createdBy.displayName + ", "}</span>
                 <Ago date={this.props.pullRequest.creationDate} format={AgoFormat.Compact} />
-            </span>));
+            </React.Fragment>));
     }
 
     private renderHeader(header: JSX.Element | string, description: JSX.Element | string) {
+        const { releaseDate } = this.state;
+        const commandBarItems: IHeaderCommandBarItem[] = [
+            {
+                id: "setDate",
+                text: releaseDate ? "Deploy on " + moment(releaseDate).format("DD/MM hh:mm") : "Schedule deployment",
+                iconProps: {
+                    iconName: "DateTime2"
+                },
+                onActivate: () => this.setState({ openTimeDialog: true })
+            }
+        ];
+
+        const onDismiss = () => this.setState({ openTimeDialog: false });
         return (
-            <CustomHeader className="bolt-header-with-commandbar">
-                <HeaderIcon className="bolt-table-status-icon-large" iconProps={{ iconName: "OpenSource" }} titleSize={TitleSize.Medium} />
-                <HeaderTitleArea>
-                    <HeaderTitleRow>
-                        <HeaderTitle className="text-ellipsis" titleSize={TitleSize.Medium}>
-                            {header}
-                        </HeaderTitle>
-                    </HeaderTitleRow>
-                    <HeaderDescription>
-                        {description}
-                    </HeaderDescription>
-                </HeaderTitleArea>
-            </CustomHeader>
+            <React.Fragment>
+                <CustomHeader className="bolt-header-with-commandbar">
+                    <HeaderIcon className="bolt-table-status-icon-large" iconProps={{ iconName: "OpenSource" }} titleSize={TitleSize.Medium} />
+                    <HeaderTitleArea>
+                        <HeaderTitleRow>
+                            <HeaderTitle className="text-ellipsis" titleSize={TitleSize.Medium}>
+                                {header}
+                            </HeaderTitle>
+                        </HeaderTitleRow>
+                        <HeaderDescription>
+                            {description}
+                        </HeaderDescription>
+                    </HeaderTitleArea>
+                    <HeaderCommandBar items={commandBarItems} />
+                </CustomHeader>
+                {this.state.openTimeDialog && (
+                    <Dialog
+                        titleProps={{ text: "Select deployment time" }}
+                        footerButtonProps={[
+                            {
+                                text: "Cancel",
+                                onClick: onDismiss
+                            },
+                            {
+                                text: "Reset time",
+                                onClick: () => this.releaseDatePicker!.reset()
+                            },
+                            {
+                                text: "Apply",
+                                onClick: () => this.setState({ openTimeDialog: false, releaseDate: this.releaseDatePicker!.getValue() }),
+                                primary: true
+                            }
+                        ]}
+                        onDismiss={onDismiss}
+                    >
+                        <span className="release-set-date-dialog_disclaimer">
+                            Disclaimer: There is no automated deployment on schedule available.
+                        </span>
+                        <DateTimePicker ref={r => this.releaseDatePicker = r} />
+                    </Dialog>
+
+                )}
+            </React.Fragment>
         );
     }
+
+    public getReleaseDate = (): Date | undefined => this.state.releaseDate;
 }

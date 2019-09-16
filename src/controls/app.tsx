@@ -17,6 +17,7 @@ import { noop } from "azure-devops-ui/Util";
 
 import { RepositoryRef } from "../data/repository";
 import { SettingsService, IPluginSettings } from "../data/settings";
+import { Report, Release } from "src/data/app";
 
 interface IAppState {
     repositories: RepositoryRef[];
@@ -25,9 +26,11 @@ interface IAppState {
     loaded: boolean;
 }
 
+
 class App extends React.Component<{}, IAppState> {
     private settings: Settings | null;
     private settingsService: SettingsService;
+    private releaseNotes: { [id: string]: (ReleaseNotes | null) } = {};
 
     private headerCommands: ObservableArray<IHeaderCommandBarItem> = new ObservableArray([
         this.renderEmailButton(true),
@@ -98,11 +101,21 @@ class App extends React.Component<{}, IAppState> {
                         ]}
                         onDismiss={onEmailDialogDismiss}
                     >
-                        <EmailTemplate />
+                        <EmailTemplate pullState={() => this.getReleaseReport()}/>
                     </Dialog>
                 )}
             </Page>
         );
+    }
+
+    private getReleaseReport(): Report {
+        var releases = Object.keys(this.releaseNotes)
+            .map(key => this.releaseNotes[key])
+            .filter(r => r !== null)
+            .map((r: ReleaseNotes) => r.getRelease())
+            .filter(r => r !== null) as Release[];
+
+        return { releases: releases };
     }
 
     private renderCards() {
@@ -120,7 +133,7 @@ class App extends React.Component<{}, IAppState> {
 
         return <div className="release-notes-container">
             {this.state.repositories.map((repo: RepositoryRef) => {
-                return (<ReleaseNotes repostitory={repo} key={repo.id} />);
+                return (<ReleaseNotes repostitory={repo} key={repo.id} ref={r => this.releaseNotes[repo.id] = r} />);
             })}
         </div>;
     }
@@ -136,6 +149,7 @@ class App extends React.Component<{}, IAppState> {
     }
 
     private onSettingsChanged = (settings: IPluginSettings) => {
+        this.releaseNotes = {};
         this.setState({ loaded: true, repositories: settings.repositories.map(r => ({ id: r.key, name: r.name })) });
         this.headerCommands.change(0, this.renderEmailButton(settings.repositories.length === 0));
     }

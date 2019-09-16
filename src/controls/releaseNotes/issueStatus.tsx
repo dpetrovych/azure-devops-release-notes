@@ -1,20 +1,15 @@
 import * as React from "React";
+import { modificator } from "../helper/bem";
 
 interface IIssueStatusProps {
     status: string;
 }
 
-export class IssueStatus extends React.Component<IIssueStatusProps, {}>
+export function IssueStatus(props: IIssueStatusProps): JSX.Element
 {
-    render() {
-        return (
-            <div className={`issue-status issue-status--${this.getModificator()}`}>
-                <span> {this.props.status} </span>
-            </div>
-        );
-    }
-
-    getModificator() {
-        return this.props.status.toLowerCase().replace(/\s/g, "-");
-    }
+    return (
+        <div className={`issue-status issue-status--${modificator(props.status)}`}>
+            <span> {props.status} </span>
+        </div>
+    );
 }
