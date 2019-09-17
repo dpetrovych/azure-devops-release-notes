@@ -3,10 +3,13 @@ import { IdentityRef } from "azure-devops-extension-api/WebApi";
 import { WorkItemTrackingRestClient, WorkItemExpand, WorkItemErrorPolicy, WorkItem } from "azure-devops-extension-api/WorkItemTracking";
 import * as API from "azure-devops-extension-api";
 
-export class ZeroPullRequestRef { }
+export class ZeroPullRequestRef {
+    repositoryId: string;
+ }
 
 export class PullRequestRef {
     id: number;
+    repositoryId: string;
     title: string;
     status: string;
     creationDate: Date;
@@ -45,6 +48,7 @@ const mapToPullRequestRef = (pr: GitPullRequest): PullRequestRef =>
     new PullRequestRef({
         id: pr.pullRequestId,
         title: pr.title,
+        repositoryId: pr.repository.id,
         status: getPullRequestStatus(pr.status),
         creationDate: pr.creationDate,
         createdBy: pr.createdBy

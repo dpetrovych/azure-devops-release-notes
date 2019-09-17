@@ -5,6 +5,7 @@ import { Table } from "azure-devops-ui/Table";
 import { ObservableArray, ObservableValue } from "azure-devops-ui/Core/Observable";
 
 import { RepositoryRef } from "../../data/repository";
+import { ReleaseService } from "../../data/releases";
 import { Release } from "../../data/app";
 import { ReleaseNotesService, Issue, PullRequestRef, ZeroPullRequestRef } from "../../data/releaseNotes";
 import { ITableItem, issueColumns } from "./issueTable";
@@ -14,6 +15,7 @@ import { modificator } from "../helper/bem";
 
 interface IReleaseNotesProps {
     repostitory: RepositoryRef;
+    releaseService: ReleaseService;
 }
 
 interface IReleaseNotesState {
@@ -64,7 +66,7 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
             <Card className="release-notes-card" titleProps={{ text: this.props.repostitory.name }}>
                 {this.state.pullRequest &&
                     (<div>
-                        <ReleaseHeader pullRequest={this.state.pullRequest} ref={r => this.header = r}/>
+                        <ReleaseHeader pullRequest={this.state.pullRequest} releaseService={this.props.releaseService} ref={r => this.header = r}/>
                         {(this.state.pullRequest instanceof PullRequestRef) && (
                             <Table<Partial<ITableItem>>
                             columns={issueColumns}

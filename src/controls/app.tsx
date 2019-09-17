@@ -17,6 +17,7 @@ import { noop } from "azure-devops-ui/Util";
 
 import { RepositoryRef } from "../data/repository";
 import { SettingsService, IPluginSettings } from "../data/settings";
+import { ReleaseService } from "../data/releases";
 import { Report, Release } from "src/data/app";
 
 interface IAppState {
@@ -30,6 +31,7 @@ interface IAppState {
 class App extends React.Component<{}, IAppState> {
     private settings: Settings | null;
     private settingsService: SettingsService;
+    private releaseService: ReleaseService;
     private releaseNotes: { [id: string]: (ReleaseNotes | null) } = {};
 
     private headerCommands: ObservableArray<IHeaderCommandBarItem> = new ObservableArray([
@@ -44,6 +46,7 @@ class App extends React.Component<{}, IAppState> {
     constructor(props: Readonly<{}>) {
         super(props);
         this.settingsService = new SettingsService();
+        this.releaseService = new ReleaseService();
 
         this.state = {
             repositories: [],
@@ -54,7 +57,7 @@ class App extends React.Component<{}, IAppState> {
     }
 
     componentDidMount() {
-        this.settingsService.initialize()
+        Promise.all([this.settingsService.initialize(), this.releaseService.initialize()])
             .then(() => this.settingsService.get().then(this.onSettingsChanged));
     }
 
@@ -133,7 +136,7 @@ class App extends React.Component<{}, IAppState> {
 
         return <div className="release-notes-container">
             {this.state.repositories.map((repo: RepositoryRef) => {
-                return (<ReleaseNotes repostitory={repo} key={repo.id} ref={r => this.releaseNotes[repo.id] = r} />);
+                return (<ReleaseNotes repostitory={repo} key={repo.id} releaseService={this.releaseService} ref={r => this.releaseNotes[repo.id] = r} />);
             })}
         </div>;
     }

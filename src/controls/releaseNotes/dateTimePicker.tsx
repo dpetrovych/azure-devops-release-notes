@@ -22,14 +22,20 @@ const timeOptions: IDropdownOption[] = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
         key: t
     }));
 
+export interface IDatePickerProps {
+    value?: Date;
+}
+
 export interface IDatePickerState {
     value?: Date;
 }
 
-export class DateTimePicker extends React.Component<{}, IDatePickerState> {
-    constructor(props: {}) {
+export class DateTimePicker extends React.Component<IDatePickerProps, IDatePickerState> {
+    constructor(props: IDatePickerProps) {
         super(props);
-        this.state = {};
+        this.state = {
+            value: props.value
+        };
     }
 
     public render(): JSX.Element {

@@ -18,11 +18,13 @@ import { AgoFormat } from "azure-devops-ui/Utilities/Date";
 import { VssPersona, IIdentityDetailsProvider } from "azure-devops-ui/VssPersona";
 
 import { PullRequestRef, ZeroPullRequestRef } from "../../data/releaseNotes";
+import { ReleaseService } from "../../data/releases";
 import { DateTimePicker } from "./dateTimePicker";
 import moment = require("moment");
 
 interface IReleaseHeaderProps {
     pullRequest: PullRequestRef | ZeroPullRequestRef;
+    releaseService: ReleaseService;
 }
 
 interface IReleaseHeaderState {
@@ -47,9 +49,19 @@ export class ReleaseHeader extends React.PureComponent<IReleaseHeaderProps, IRel
         };
     }
 
+    componentWillMount() {
+        var { pullRequest, releaseService } = this.props;
+        if (pullRequest instanceof ZeroPullRequestRef) {
+            return;
+        }
+
+        releaseService.getRelease(pullRequest.repositoryId, pullRequest.id)
+            .then(release => this.setState({ releaseDate: release.date }));
+    }
+
     render() {
         if (this.props.pullRequest instanceof ZeroPullRequestRef) {
-            return this.renderHeader("No pull request found", "Create a pull request to master branch to review release notes");
+            return this.renderHeader("No pull request found", "Create a pull request to master branch to review release notes", true);
         }
 
         return this.renderHeader(
@@ -66,18 +78,21 @@ export class ReleaseHeader extends React.PureComponent<IReleaseHeaderProps, IRel
             </React.Fragment>));
     }
 
-    private renderHeader(header: JSX.Element | string, description: JSX.Element | string) {
+    private renderHeader(header: JSX.Element | string, description: JSX.Element | string, isZero: boolean = false) {
         const { releaseDate } = this.state;
-        const commandBarItems: IHeaderCommandBarItem[] = [
-            {
-                id: "setDate",
-                text: releaseDate ? "Deploy on " + moment(releaseDate).format("DD/MM hh:mm") : "Schedule deployment",
-                iconProps: {
-                    iconName: "DateTime2"
-                },
-                onActivate: () => this.setState({ openTimeDialog: true })
-            }
-        ];
+
+        const commandBarItems: IHeaderCommandBarItem[] = isZero
+            ? []
+            : [
+                {
+                    id: "setDate",
+                    text: releaseDate ? "Deploy on " + moment(releaseDate).format("DD/MM HH:mm") : "Schedule deployment",
+                    iconProps: {
+                        iconName: "DateTime2"
+                    },
+                    onActivate: () => this.setState({ openTimeDialog: true })
+                }
+            ];
 
         const onDismiss = () => this.setState({ openTimeDialog: false });
         return (
@@ -110,7 +125,7 @@ export class ReleaseHeader extends React.PureComponent<IReleaseHeaderProps, IRel
                             },
                             {
                                 text: "Apply",
-                                onClick: () => this.setState({ openTimeDialog: false, releaseDate: this.releaseDatePicker!.getValue() }),
+                                onClick: this._setReleaseDate,
                                 primary: true
                             }
                         ]}
@@ -119,7 +134,7 @@ export class ReleaseHeader extends React.PureComponent<IReleaseHeaderProps, IRel
                         <span className="release-set-date-dialog_disclaimer">
                             Disclaimer: There is no automated deployment on schedule available.
                         </span>
-                        <DateTimePicker ref={r => this.releaseDatePicker = r} />
+                        <DateTimePicker value={releaseDate} ref={r => this.releaseDatePicker = r} />
                     </Dialog>
 
                 )}
@@ -128,4 +143,17 @@ export class ReleaseHeader extends React.PureComponent<IReleaseHeaderProps, IRel
     }
 
     public getReleaseDate = (): Date | undefined => this.state.releaseDate;
+
+    private _setReleaseDate = (): void => {
+        var { pullRequest, releaseService } = this.props;
+        if (pullRequest instanceof ZeroPullRequestRef) {
+            this.setState({ openTimeDialog: false });
+            return;
+        }
+
+        var releaseDate = this.releaseDatePicker!.getValue();
+
+        releaseService.setReleaseDate(pullRequest.repositoryId, pullRequest.id, releaseDate)
+            .then(() => this.setState({ openTimeDialog: false, releaseDate: releaseDate }));
+    }
 }
