@@ -1,5 +1,5 @@
 {
-  "name": "dbd-release-notes",
+  "name": "d93-release-notes",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -13,8 +13,8 @@
     "lint": "tslint -c tslint.json 'src/*.ts'"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Dmytro Petrovych",
+  "license": "MIT",
   "devDependencies": {
     "@types/react": "^16.9.2",
     "@types/react-dom": "^16.9.0",
