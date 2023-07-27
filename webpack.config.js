@@ -5,7 +5,7 @@ module.exports = {
     entry: "./src/bootstrap.tsx",
     output: {
         path: path.resolve(__dirname, "dist"),
-        filename: "bundle.js"
+        filename: "bundle.js",
     },
     resolve: {
         extensions: [".ts", ".tsx", ".js", ".scss"],
@@ -14,7 +14,6 @@ module.exports = {
         },
     },
     devtool: "source-map",
-    plugins: [],
     module: {
         rules: [{
                 test: /\.scss$/,

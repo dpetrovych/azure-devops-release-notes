@@ -17,15 +17,17 @@ export class Settings extends React.Component<ISettingsProps, {}> {
     render() {
         return (
             <Filters
-                filter={this.props.settingsService.get().then(x => x.repositories)}
+                filter={this.props.settingsService.get().then(x => {
+                    console.log(x);
+                    return x.repositories})}
                 ref={f => (this.filters = f)}
             />
         );
     }
 
     public async save() {
-        var repositories = this.filters!.getRepositories();
-        var settings = { repositories: repositories };
+        const repositories = this.filters!.getRepositories();
+        const settings = { repositories: repositories };
         await this.props.settingsService.save(settings);
 
         this.props.onChanged(settings);

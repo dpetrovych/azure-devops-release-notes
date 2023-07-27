@@ -1,6 +1,5 @@
+import { DatePicker, DayOfWeek, Dropdown, IDatePickerStrings, IDropdownOption } from '@fluentui/react';
 import * as React from 'react';
-import { Dropdown, IDropdownOption } from 'office-ui-fabric-react/lib/Dropdown';
-import { DatePicker, DayOfWeek, IDatePickerStrings } from 'office-ui-fabric-react/lib/DatePicker';
 
 const DayPickerStrings: IDatePickerStrings = {
     months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],

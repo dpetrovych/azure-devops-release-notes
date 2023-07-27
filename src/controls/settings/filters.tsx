@@ -1,92 +1,86 @@
 import * as React from "react";
 
-import { Dropdown } from "azure-devops-ui/Dropdown";
-import { Observer } from "azure-devops-ui/Observer";
-import { DropdownMultiSelection } from "azure-devops-ui/Utilities/DropdownSelection";
+import { ComboBox, IComboBox, IComboBoxOption } from "@fluentui/react";
 
 import { GitRestClient } from "azure-devops-extension-api/Git";
 import * as API from "azure-devops-extension-api";
-import { IListBoxItem } from "azure-devops-ui/ListBox";
 
 export interface IFiltersProps {
     filter: Promise<{ key: string; name: string }[]>;
 }
 
 interface IFiltersState {
-    repos: IListBoxItem[];
+    repos: IComboBoxOption[];
+    selected: string[];
 }
 
 export class Filters extends React.Component<IFiltersProps, IFiltersState> {
-    private selection = new DropdownMultiSelection();
+
+    private defaultSelectedRepoKeys: string[] = [];
 
     constructor(props: Readonly<IFiltersProps>) {
         super(props);
 
         this.state = {
-            repos: []
+            repos: [],
+            selected: []
         };
 
         API.getClient(GitRestClient).getRepositories()
             .then(repos => {
-                var repositoryNames: IListBoxItem[] = repos.map(
-                    (x): IListBoxItem => (
+                const repositoryNames: IComboBoxOption[] = repos.map(
+                    (x): IComboBoxOption => (
                         {
-                            id: x.id,
+                            key: x.id,
                             text: x.name
                         }));
 
                 this.setState({ repos: repositoryNames });
 
                 props.filter.then(selectedRepos => {
+                    console.log(selectedRepos);
                     selectedRepos.forEach(srepo => {
-                        repositoryNames.forEach((r, i) => {
-                            if (r.id === srepo.key) {
-                                this.selection.select(i);
+                        repositoryNames.forEach((r) => {
+                            if (r.key === srepo.key) {
+                                this.defaultSelectedRepoKeys = [...this.defaultSelectedRepoKeys, r.key];
+                                this.setState({ selected: [...this.state.selected, r.key] })
                             }
                         });
                     });
                 });
-            });
+            }
+            );
     }
 
     render() {
         return (
             <div style={{ margin: "8px" }} className="flex-grow">
-                <Observer selection={this.selection}>
-                    {() => {
-                        return (
-                            <Dropdown
-                                actions={[
-                                    {
-                                        className: "bolt-dropdown-action-right-button",
-                                        disabled: this.selection.selectedCount === 0,
-                                        iconProps: { iconName: "Clear" },
-                                        text: "Clear",
-                                        onClick: () => {
-                                            this.selection.clear();
-                                        }
-                                    }
-                                ]}
-                                className="projects-dropdown"
-                                items={this.state.repos}
-                                selection={this.selection}
-                                placeholder="Select repositories..."
-                                showFilterBox={true}
-                            />
-                        );
-                    }
-                    }
-                </Observer>
+                <ComboBox
+                    multiSelect
+                    defaultSelectedKey={this.defaultSelectedRepoKeys}
+                    selectedKey={this.state.selected}
+                    onChange={this.onChange}
+                    className="projects-dropdown"
+                    options={this.state.repos}
+                    placeholder="Select repositories..."
+                    autoComplete={"on"}
+                />
             </div>
         );
     }
 
     getRepositories(): { key: string; name: string }[] {
-        var selectedRepos = this.selection.value
-            .map(x => this.state.repos.slice(x.beginIndex, x.endIndex + 1))
-            .reduce((a, x) => a.concat(x), []);
+        const repos = this.state.repos;
+        const selectedKeys = this.state.selected;
+        const selectedRepos = repos.filter(repo => selectedKeys.find(selected => selected === repo.key));
 
-        return selectedRepos.map(s => ({ key: s.id, name: s.text || "" }));
+        selectedRepos.map(selected => ({ key: selected.key as string, name: selected.text }));
+        return selectedRepos.map(selected => ({ key: selected.key as string, name: selected.text }));;
+    }
+    private onChange = (_: React.FormEvent<IComboBox>, item: IComboBoxOption) => {
+        if (item) {
+            this.setState({ selected: item.selected ? [...this.state.selected, item.key as string] : this.state.selected.filter(key => key !== item.key) });
+        }
     }
 }
 

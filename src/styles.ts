@@ -1,8 +1,7 @@
-import { loadTheme } from 'office-ui-fabric-react';
-import { initializeIcons } from 'office-ui-fabric-react/lib/Icons';
+import { Theme, initializeIcons, createTheme, loadTheme } from "@fluentui/react";
 
 export function applyFabricUITheme() {
-    var style = getComputedStyle(document.documentElement);
+    const style = getComputedStyle(document.documentElement);
     const color = (variable: string) => {
         const value = style.getPropertyValue(variable);
         return "#" + value.split(", ").map(x => parseInt(x).toString(16)).map(x => x.length === 1 ? "0" + x : x).join("");
@@ -33,6 +32,9 @@ export function applyFabricUITheme() {
         white: color('--palette-neutral-0'),
     };
 
+    const appTheme: Theme = createTheme({
+        palette: palette
+    })
     initializeIcons();
-    loadTheme({palette: palette});
+    loadTheme(appTheme);
 }

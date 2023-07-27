@@ -32,6 +32,6 @@ steps:
 - task: PublishPipelineArtifact@1
   displayName: 'Publish artifact'
   inputs:
-    targetPath: 'dimati93.d93-release-notes-$(Build.BuildNumber).vsix'
+    targetPath: 'dpetrovych.dpetrovych-release-notes-$(Build.BuildNumber).vsix'
     artifact: 'extension'
     publishLocation: 'pipeline'

@@ -1,26 +1,35 @@
 import * as React from "react";
-
 import { Card } from "azure-devops-ui/Card";
 import { Table } from "azure-devops-ui/Table";
 import { ObservableArray, ObservableValue } from "azure-devops-ui/Core/Observable";
 
-import { RepositoryRef } from "../../data/repository";
-import { ReleaseService } from "../../data/releases";
 import { Release } from "../../data/app";
-import { ReleaseNotesService, Issue, PullRequestRef, ZeroPullRequestRef } from "../../data/releaseNotes";
+
+import { modificator } from "../helper/bem";
 import { ITableItem, issueColumns } from "./issueTable";
 import { ReleaseHeader } from "./releaseHeader";
-import { modificator } from "../helper/bem";
+import { Issue, PullRequestRef, ZeroPullRequestRef } from "../../data/releaseNotes";
+import { ReleaseService } from "../../data/releases";
+import { RepositoryRef } from "../../data/repository";
+import { TagsService } from "../../data/services/TagService";
+import { CommitService } from "../../data/services/CommitService";
+import { Dropdown, IDropdownOption, Icon, Stack } from "@fluentui/react";
+import { GitAnnotatedTag } from "azure-devops-extension-api/Git";
+import { ReleaseNotesService } from "../../data/services/ReleaseNotesService";
 
-
-interface IReleaseNotesProps {
-    repostitory: RepositoryRef;
-    releaseService: ReleaseService;
-}
 
 interface IReleaseNotesState {
     pullRequestIndex: number | undefined;
     pullRequest: PullRequestRef | ZeroPullRequestRef | undefined;
+    tags: IDropdownOption[];
+    selected: { key: string | undefined }
+}
+
+interface IReleaseNotesProps {
+    repostitory: RepositoryRef;
+    releaseService: ReleaseService;
+    tagService: TagsService;
+    commitService: CommitService;
 }
 
 const issueToTableItem = (issue: Issue): ITableItem => {
@@ -36,23 +45,44 @@ const issueToTableItem = (issue: Issue): ITableItem => {
     };
 };
 
+
 export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNotesState> {
     private service = new ReleaseNotesService();
     private pullRequests: PullRequestRef[];
     private header: ReleaseHeader | null;
-    private itemProvider = new ObservableArray<ITableItem | ObservableValue<ITableItem | undefined>>();
+    // private itemProvider = new ObservableArray<ITableItem | ObservableValue<ITableItem | undefined>>();
+    private releaseNotesProvider = new ObservableArray<ITableItem | ObservableValue<ITableItem | undefined>>();
     private issues: Issue[] = [];
+
+    private tags: GitAnnotatedTag[] = [];
 
     constructor(props: Readonly<IReleaseNotesProps>) {
         super(props);
         this.state = {
             pullRequestIndex: undefined,
-            pullRequest: undefined
-        };
+            pullRequest: undefined,
+            tags: [],
+            selected: { key: undefined }
+        }
     }
 
     componentDidMount() {
         this.initialize();
+        const { tagService } = this.props;
+
+        tagService.getAnnotedTags(this.props.repostitory.id)
+            .then(tags => {
+                this.tags = tags;
+                const tagNames = tags.map(
+                    tag => ({
+                        key: tag.objectId,
+                        text: tag.name
+                    } as IDropdownOption)
+                );
+
+                this.setState({ tags: tagNames })
+            });
+
     }
 
     componentDidUpdate(prevProps) {
@@ -66,18 +96,44 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
             <Card className="release-notes-card" titleProps={{ text: this.props.repostitory.name }}>
                 {this.state.pullRequest &&
                     (<div>
-                        <ReleaseHeader pullRequest={this.state.pullRequest} releaseService={this.props.releaseService} ref={r => this.header = r}/>
-                        {(this.state.pullRequest instanceof PullRequestRef) && (
-                            <Table<Partial<ITableItem>>
-                            columns={issueColumns}
-                            itemProvider={this.itemProvider}
-                            showLines={false}
-                        />)}
+                        <ReleaseHeader pullRequest={this.state.pullRequest} releaseService={this.props.releaseService} ref={r => this.header = r} />
                     </div>)
                 }
+                <Dropdown
+                    className="projects-dropdown"
+                    options={this.state.tags}
+                    placeholder="Select tags..."
+                    onChange={this.onSelectionChange}
+                    selectedKey={this.state.selected.key}
+                    ariaLabel="From"
+                    onRenderCaretDown={() => {
+                        return (
+                            <Stack horizontal verticalAlign={"center"}>
+                                <Icon
+                                    iconName={"ChevronDown"}
+                                    styles={{
+                                        root: {
+                                            color: "rgb(96, 94, 92)",
+                                            "&:hover": {
+                                                fontWeight: 800
+                                            }
+                                        }
+                                    }}
+                                />
+
+                            </Stack>
+                        );
+                    }}
+                />
+                <Table<Partial<ITableItem>>
+                    columns={issueColumns}
+                    itemProvider={this.releaseNotesProvider}
+                    showLines={false}
+                />
             </Card>
         );
     }
+
 
     getRelease(): Release | null {
         if (this.state.pullRequest === undefined || this.state.pullRequest instanceof ZeroPullRequestRef) {
@@ -91,25 +147,27 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
         this.setState({ pullRequestIndex: undefined });
         this.pullRequests = await this.service.getTopPullRequests(this.props.repostitory.id);
 
-        var hasPullRequests = this.pullRequests && this.pullRequests.length > 0;
+        const hasPullRequests = this.pullRequests && this.pullRequests.length > 0;
 
         this.setState({
             pullRequestIndex: 0,
             pullRequest: hasPullRequests ? this.pullRequests[0] : new ZeroPullRequestRef()
         });
 
-        if (hasPullRequests) {
-            await this.initializeNotes(this.pullRequests[0].id);
-        }
     }
 
-    private async initializeNotes(pullRequestId: number) {
-        this.itemProvider.removeAll();
-        this.itemProvider.push(...new Array(3).fill(new ObservableValue<ITableItem | undefined>(undefined)));
 
-        this.issues = await this.service.getReleaseNotes(this.props.repostitory.id, pullRequestId);
+    private onSelectionChange = async (_: React.FormEvent<HTMLDivElement>, selection: IDropdownOption) => {
+        this.releaseNotesProvider.removeAll();
+        this.setState({ selected: { key: selection.key as string } })
 
-        this.itemProvider.removeAll();
-        this.itemProvider.push(...this.issues.map(x => issueToTableItem(x)));
+        const commitIdFromSelectedTag = this.tags.find(tag => tag.objectId === this.state.selected.key)?.objectId!;
+
+        const commits = await this.props.commitService.getCommitsFromCommitId(this.props.repostitory.id, commitIdFromSelectedTag);
+        const releaseNotesIssues = await this.service.getReleaseNotesIssuesBasedOnTags(commits);
+
+        this.issues = releaseNotesIssues;
+        this.releaseNotesProvider.push(...releaseNotesIssues.map(releaseNoteIssue => issueToTableItem(releaseNoteIssue)));
     }
+
 }

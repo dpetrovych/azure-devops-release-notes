@@ -1,8 +1,8 @@
 {
  	"manifestVersion": 1,
- 	"id": "d93-release-notes",
- 	"publisher": "dimati93",
- 	"version": "0.1.95",
+ 	"id": "dpetrovych-release-notes",
+ 	"publisher": "dpetrovych",
+ 	"version": "0.1.175",
  	"name": "Release Notes",
  	"description": "Release Notes extension",
 	"public": false,

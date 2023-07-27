@@ -1,5 +1,8 @@
 .release-notes-card {
     margin: 8px 16px 0px;
+    .bolt-card-content{
+        flex-direction: column;
+    }
 }
 
 .release-status {
@@ -12,3 +15,4 @@
     display: inline-block;
     vertical-align: bottom;
 }
+
