@@ -17,15 +17,15 @@ export class TagsService {
 
     }
 
-    public async getAnnotedTags(repositoryId: string): Promise<GitAnnotatedTag[]> {
-        const refs = await this.getRefs(repositoryId, "tags");
+    public async getAnnotatedTags(repositoryId: string): Promise<GitAnnotatedTag[]> {
+        const refs = await this.getRefs(repositoryId, 'tags');
 
         const tags = await Promise.all(refs.map(async ref => await this.gitClient.getAnnotatedTag(this.projectId, repositoryId, ref.objectId)));
         return tags;
     }
 
     public async getRefs(repostiroyId: string, filter: string): Promise<PagedList<GitRef>> {
-        return await this.gitClient.getRefs(repostiroyId, undefined, filter);
+        return await this.gitClient.getRefs(repostiroyId, undefined, filter );
     }
 
 }

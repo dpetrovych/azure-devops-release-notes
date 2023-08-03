@@ -3,12 +3,9 @@ import * as ReactDOM from "react-dom";
 import { ReleaseNotes } from "./releaseNotes";
 import { EmailTemplate, copyEmailTemplate } from "./email";
 import { Settings } from "./settings";
-
 import { ZeroData, ZeroDataActionType } from "azure-devops-ui/ZeroData";
 import { Page } from "azure-devops-ui/Page";
 import { Dialog, DialogFooter, DialogType } from "@fluentui/react/lib/Dialog";
-import { noop } from "azure-devops-ui/Util";
-
 import { RepositoryRef } from "../data/repository";
 import { Report, Release } from "../../src/data/app";
 import { ReleaseService } from "../../src/data/releases";
@@ -16,6 +13,7 @@ import { CommitService } from "../../src/data/services/CommitService";
 import { TagsService } from "../../src/data/services/TagService";
 import { SettingsService, IPluginSettings } from "../../src/data/settings";
 import { DefaultButton, Panel, PrimaryButton } from "@fluentui/react";
+import { Text } from '@fluentui/react/lib/Text';
 
 interface IAppState {
     repositories: RepositoryRef[];
@@ -47,8 +45,8 @@ class App extends React.Component<{}, IAppState> {
         };
     }
 
-    public async componentDidMount() {
-        await Promise.all([this.settingsService.initialize(), this.releaseService.initialize(), this.commitService.initialize(), this.tagService.initialize()])
+    public componentDidMount() {
+        Promise.all([this.settingsService.initialize(), this.releaseService.initialize(), this.commitService.initialize(), this.tagService.initialize()])
             .then(() => this.settingsService.get().then(this.onSettingsChanged));
     }
 
@@ -59,7 +57,9 @@ class App extends React.Component<{}, IAppState> {
         return (
             <Page className="flex-grow">
                 <div className="header-container">
-                    <h2>Release Notes</h2>
+                    <Text variant={'xxLarge'} block>
+                        Release Notes
+                    </Text>
                     <div className="button-container">
                         <DefaultButton iconProps={{ "iconName": "Mail" }} text="Email" onClick={this.openEmailDialog}></DefaultButton>
                         <DefaultButton iconProps={{ "iconName": "Settings" }} text="Settings" onClick={this.openSettingsDialog}></DefaultButton>
@@ -101,12 +101,11 @@ class App extends React.Component<{}, IAppState> {
         );
     }
     private onSettingsSave = () => {
-        if(this.settings){
+        if (this.settings) {
             this.settings.save();
             this.setState({ settingsExpanded: false });
             return;
         }
-        noop();
     }
 
     private openSettingsDialog = () => {

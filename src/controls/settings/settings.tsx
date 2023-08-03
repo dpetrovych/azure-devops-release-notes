@@ -17,9 +17,8 @@ export class Settings extends React.Component<ISettingsProps, {}> {
     render() {
         return (
             <Filters
-                filter={this.props.settingsService.get().then(x => {
-                    console.log(x);
-                    return x.repositories})}
+                filter={this.props.settingsService.get().then(pluginSettings => {
+                    return pluginSettings.repositories})}
                 ref={f => (this.filters = f)}
             />
         );

@@ -35,6 +35,6 @@ export function applyFabricUITheme() {
     const appTheme: Theme = createTheme({
         palette: palette
     })
-    initializeIcons();
+    initializeIcons('https://static2.sharepointonline.com/files/fabric/assets/icons/');
     loadTheme(appTheme);
 }

@@ -17,7 +17,6 @@ import { Dropdown, IDropdownOption, Icon, Stack } from "@fluentui/react";
 import { GitAnnotatedTag } from "azure-devops-extension-api/Git";
 import { ReleaseNotesService } from "../../data/services/ReleaseNotesService";
 
-
 interface IReleaseNotesState {
     pullRequestIndex: number | undefined;
     pullRequest: PullRequestRef | ZeroPullRequestRef | undefined;
@@ -50,7 +49,6 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
     private service = new ReleaseNotesService();
     private pullRequests: PullRequestRef[];
     private header: ReleaseHeader | null;
-    // private itemProvider = new ObservableArray<ITableItem | ObservableValue<ITableItem | undefined>>();
     private releaseNotesProvider = new ObservableArray<ITableItem | ObservableValue<ITableItem | undefined>>();
     private issues: Issue[] = [];
 
@@ -66,22 +64,20 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
         }
     }
 
-    componentDidMount() {
+    async componentDidMount() {
         this.initialize();
         const { tagService } = this.props;
 
-        tagService.getAnnotedTags(this.props.repostitory.id)
-            .then(tags => {
-                this.tags = tags;
-                const tagNames = tags.map(
-                    tag => ({
-                        key: tag.objectId,
-                        text: tag.name
-                    } as IDropdownOption)
-                );
+        this.tags = await tagService.getAnnotatedTags(this.props.repostitory.id);
 
-                this.setState({ tags: tagNames })
-            });
+        this.setState({
+            tags: this.tags.map(tag => {
+                return {
+                    key: tag.objectId,
+                    text: tag.name
+                } as IDropdownOption
+            })
+        })
 
     }
 
