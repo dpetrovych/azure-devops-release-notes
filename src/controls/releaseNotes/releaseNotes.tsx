@@ -14,7 +14,7 @@ import { RepositoryRef } from "../../data/repository";
 import { TagsService } from "../../data/services/TagService";
 import { CommitService } from "../../data/services/CommitService";
 import { Dropdown, IDropdownOption, Icon, Stack } from "@fluentui/react";
-import { GitAnnotatedTag } from "azure-devops-extension-api/Git";
+import {  GitRef } from "azure-devops-extension-api/Git";
 import { ReleaseNotesService } from "../../data/services/ReleaseNotesService";
 
 interface IReleaseNotesState {
@@ -52,7 +52,7 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
     private releaseNotesProvider = new ObservableArray<ITableItem | ObservableValue<ITableItem | undefined>>();
     private issues: Issue[] = [];
 
-    private tags: GitAnnotatedTag[] = [];
+    private tags: GitRef[] = [];
 
     constructor(props: Readonly<IReleaseNotesProps>) {
         super(props);
@@ -68,13 +68,13 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
         this.initialize();
         const { tagService } = this.props;
 
-        this.tags = await tagService.getAnnotatedTags(this.props.repostitory.id);
+        this.tags = await tagService.getRefs(this.props.repostitory.id, "tags");
 
         this.setState({
             tags: this.tags.map(tag => {
                 return {
                     key: tag.objectId,
-                    text: tag.name
+                    text: [...tag.name.split('tags/')].pop()
                 } as IDropdownOption
             })
         })
