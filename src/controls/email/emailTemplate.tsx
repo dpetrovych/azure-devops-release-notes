@@ -6,7 +6,7 @@ export const copyEmailTemplate = () => {
     const template = document.getElementById('email-template');
     if (!template) { return; }
 
-    var range = document.createRange();
+    const range = document.createRange();
     range.selectNode(template);
     window.getSelection()!.removeAllRanges();
     window.getSelection()!.addRange(range);
@@ -47,7 +47,7 @@ export class EmailTemplate extends React.PureComponent<IEmailTemplateProps, IEma
                         <table style={{ width: "100%" }}>
                             <tbody>
                                 {release.issues.map(issue => (
-                                    <tr style={{ borderTop: "1px solid #dee2e6;" }}>
+                                    <tr style={{ borderTop: "1px solid #dee2e6" }}>
                                         <td style={{ width: "1px" }}>
                                             <a href={issue.href}>#{issue.id}</a>
                                         </td>

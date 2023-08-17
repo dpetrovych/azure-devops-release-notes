@@ -1,9 +1,21 @@
-
 .release-notes-container {
     padding-bottom: 8px;
 }
 
+.header-container{
+    display:flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-left: 16px;
+    margin-right: 16px;
 
-
-
-
+}
+.button-container{
+    display:flex;
+    gap: 10px;
+}
+.release-header-container{
+    align-items: baseline;
+    display: flex;
+    gap: 10px;
+}

@@ -1,4 +1,4 @@
-import * as React from "React";
+import * as React from "react";
 import { modificator } from "../helper/bem";
 
 interface IIssueStatusProps {

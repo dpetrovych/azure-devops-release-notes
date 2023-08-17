@@ -16,8 +16,8 @@ export class BatchedCachedValue<Args, Value> {
     ) {}
 
     public async getValue(id: string, args: Args): Promise<Value> {
-        if (this.cached[id]) {
-            return this.cached[id];
+        if (await this.cached[id]) {
+            return await this.cached[id];
         }
         this.queued[id] = args;
         if (this.options.delay) {

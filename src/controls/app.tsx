@@ -1,24 +1,19 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-
 import { ReleaseNotes } from "./releaseNotes";
 import { EmailTemplate, copyEmailTemplate } from "./email";
 import { Settings } from "./settings";
-
 import { ZeroData, ZeroDataActionType } from "azure-devops-ui/ZeroData";
 import { Page } from "azure-devops-ui/Page";
-import { Panel } from "azure-devops-ui/Panel";
-import { Dialog } from "azure-devops-ui/Dialog";
-import { ContentSize } from "azure-devops-ui/Callout";
-import { Header, TitleSize } from "azure-devops-ui/Header";
-import { IHeaderCommandBarItem } from "azure-devops-ui/HeaderCommandBar";
-import { ObservableArray } from "azure-devops-ui/Core/Observable";
-import { noop } from "azure-devops-ui/Util";
-
+import { Dialog, DialogFooter, DialogType } from "@fluentui/react/lib/Dialog";
 import { RepositoryRef } from "../data/repository";
-import { SettingsService, IPluginSettings } from "../data/settings";
-import { ReleaseService } from "../data/releases";
-import { Report, Release } from "src/data/app";
+import { Report, Release } from "../../src/data/app";
+import { ReleaseService } from "../../src/data/releases";
+import { CommitService } from "../../src/data/services/CommitService";
+import { TagsService } from "../../src/data/services/TagService";
+import { SettingsService, IPluginSettings } from "../../src/data/settings";
+import { DefaultButton, Panel, PrimaryButton } from "@fluentui/react";
+import { Text } from '@fluentui/react/lib/Text';
 
 interface IAppState {
     repositories: RepositoryRef[];
@@ -27,26 +22,20 @@ interface IAppState {
     loaded: boolean;
 }
 
-
 class App extends React.Component<{}, IAppState> {
     private settings: Settings | null;
     private settingsService: SettingsService;
     private releaseService: ReleaseService;
+    private tagService: TagsService;
+    private commitService: CommitService;
     private releaseNotes: { [id: string]: (ReleaseNotes | null) } = {};
-
-    private headerCommands: ObservableArray<IHeaderCommandBarItem> = new ObservableArray([
-        this.renderEmailButton(true),
-        {
-            id: "settings",
-            iconProps: { iconName: "Settings" },
-            onActivate: () => this.setState({ settingsExpanded: true })
-        }
-    ]);
 
     constructor(props: Readonly<{}>) {
         super(props);
         this.settingsService = new SettingsService();
         this.releaseService = new ReleaseService();
+        this.commitService = new CommitService();
+        this.tagService = new TagsService();
 
         this.state = {
             repositories: [],
@@ -56,8 +45,8 @@ class App extends React.Component<{}, IAppState> {
         };
     }
 
-    componentDidMount() {
-        Promise.all([this.settingsService.initialize(), this.releaseService.initialize()])
+    public componentDidMount() {
+        Promise.all([this.settingsService.initialize(), this.releaseService.initialize(), this.commitService.initialize(), this.tagService.initialize()])
             .then(() => this.settingsService.get().then(this.onSettingsChanged));
     }
 
@@ -67,52 +56,75 @@ class App extends React.Component<{}, IAppState> {
 
         return (
             <Page className="flex-grow">
-                <Header
-                    title="Release Notes"
-                    titleSize={TitleSize.Large}
-                    commandBarItems={this.headerCommands}
-                />
+                <div className="header-container">
+                    <Text variant={'xxLarge'} block>
+                        Release Notes
+                    </Text>
+                    <div className="button-container">
+                        <DefaultButton iconProps={{ "iconName": "Mail" }} text="Email" onClick={this.openEmailDialog}></DefaultButton>
+                        <DefaultButton iconProps={{ "iconName": "Settings" }} text="Settings" onClick={this.openSettingsDialog}></DefaultButton>
+                    </div>
+                </div>
+
                 {this.state.loaded && this.renderCards()}
-                {this.state.settingsExpanded && (
-                    <Panel
-                        onDismiss={onSettinsDismiss}
-                        titleProps={{ text: "Settings" }}
-                        description={"Select repositories to be displayed"}
-                        footerButtonProps={[
-                            { text: "Cancel", onClick: onSettinsDismiss },
-                            { text: "Save", primary: true, onClick: () => this.settings ? this.settings.save() : noop() }
-                        ]}
-                    >
-                        <Settings settingsService={this.settingsService} onChanged={this.onSettingsChanged} ref={s => (this.settings = s)} />
-                    </Panel>
-                )}
-                {this.state.emailDialogOpen && (
-                    <Dialog
-                        titleProps={{ text: "Email template" }}
-                        contentSize={ContentSize.Large}
-                        footerButtonProps={[
-                            {
-                                text: "Copy Content",
-                                iconProps: { iconName: "Copy" },
-                                onClick: copyEmailTemplate,
-                                primary: true
-                            },
-                            {
-                                text: "Close",
-                                onClick: onEmailDialogDismiss,
+
+                <Panel
+                    onDismiss={onSettinsDismiss}
+                    headerText="Settings"
+                    closeButtonAriaLabel="Close"
+                    isOpen={this.state.settingsExpanded}
+                    onRenderFooterContent={() => (
+                        <div className="button-container">
+                            <PrimaryButton text="Save" onClick={this.onSettingsSave}></PrimaryButton>
+                            <DefaultButton text="Cancel" onClick={onSettinsDismiss}></DefaultButton>
+                        </div>
+                    )}>
+
+                    <Text variant="medium">Select repositories to be displayed</Text>
+                    <Settings settingsService={this.settingsService} onChanged={this.onSettingsChanged} ref={s => (this.settings = s)} />
+                </Panel>
+
+                <Dialog
+                    hidden={!this.state.emailDialogOpen}
+                    dialogContentProps={{
+                        title: "Email template",
+                        type: DialogType.normal,
+                    }}
+                    modalProps={
+                        {
+                            styles: {
+                                main: {
+                                    maxWidth: '100%'
+                                }
                             }
-                        ]}
-                        onDismiss={onEmailDialogDismiss}
-                    >
-                        <EmailTemplate pullState={() => this.getReleaseReport()}/>
-                    </Dialog>
-                )}
+                        }
+                    }
+                >
+                    <DialogFooter>
+                        <PrimaryButton iconProps={{ "iconName": "Copy" }} text="Copy Content" onClick={copyEmailTemplate}></PrimaryButton>
+                        <DefaultButton text="Close" onClick={onEmailDialogDismiss}></DefaultButton>
+                    </DialogFooter>
+                    <EmailTemplate pullState={() => this.getReleaseReport()} />
+                </Dialog>
             </Page>
         );
     }
+    private onSettingsSave = () => {
+        if (this.settings) {
+            this.settings.save();
+            this.setState({ settingsExpanded: false });
+            return;
+        }
+    }
 
+    private openSettingsDialog = () => {
+        this.setState({ settingsExpanded: true });
+    }
+    private openEmailDialog = () => {
+        this.setState({ emailDialogOpen: true });
+    }
     private getReleaseReport(): Report {
-        var releases = Object.keys(this.releaseNotes)
+        const releases = Object.keys(this.releaseNotes)
             .map(key => this.releaseNotes[key])
             .filter(r => r !== null)
             .map((r: ReleaseNotes) => r.getRelease())
@@ -125,7 +137,7 @@ class App extends React.Component<{}, IAppState> {
         if (this.state.repositories.length === 0) {
             return <ZeroData
                 primaryText="No projects selected for release notes"
-                secondaryText="Use settins to select projects to be dispalayed."
+                secondaryText="Use settings to select projects to be dispalayed."
                 imageAltText="logo"
                 imagePath="../img/zerodata.png"
                 actionText="Select projects"
@@ -136,25 +148,19 @@ class App extends React.Component<{}, IAppState> {
 
         return <div className="release-notes-container">
             {this.state.repositories.map((repo: RepositoryRef) => {
-                return (<ReleaseNotes repostitory={repo} key={repo.id} releaseService={this.releaseService} ref={r => this.releaseNotes[repo.id] = r} />);
+                return (<ReleaseNotes repostitory={repo}
+                    key={repo.id}
+                    releaseService={this.releaseService}
+                    ref={r => this.releaseNotes[repo.id] = r}
+                    commitService={this.commitService} tagService={this.tagService} />);
             })}
         </div>;
-    }
-
-    private renderEmailButton(disabled: boolean): IHeaderCommandBarItem {
-        return {
-            id: "email",
-            iconProps: { iconName: "Mail" },
-            text: "Email",
-            onActivate: () => this.setState({ emailDialogOpen: true }),
-            disabled: disabled
-        };
     }
 
     private onSettingsChanged = (settings: IPluginSettings) => {
         this.releaseNotes = {};
         this.setState({ loaded: true, repositories: settings.repositories.map(r => ({ id: r.key, name: r.name })) });
-        this.headerCommands.change(0, this.renderEmailButton(settings.repositories.length === 0));
+
     }
 }
 
