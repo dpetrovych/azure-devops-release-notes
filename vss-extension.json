@@ -2,7 +2,7 @@
  	"manifestVersion": 1,
  	"id": "dpetrovych-release-notes",
  	"publisher": "dpetrovych",
- 	"version": "0.1.175",
+ 	"version": "0.1.213",
  	"name": "Release Notes",
  	"description": "Release Notes extension",
 	"public": false,

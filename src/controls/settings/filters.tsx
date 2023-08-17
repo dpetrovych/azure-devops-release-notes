@@ -35,10 +35,10 @@ export class Filters extends React.Component<IFiltersProps, IFiltersState> {
                             text: x.name
                         }));
 
+                repositoryNames.sort((a,b) => a.text.localeCompare(b.text))
                 this.setState({ repos: repositoryNames });
 
                 props.filter.then(selectedRepos => {
-                    console.log(selectedRepos);
                     selectedRepos.forEach(srepo => {
                         repositoryNames.forEach((r) => {
                             if (r.key === srepo.key) {
@@ -63,7 +63,6 @@ export class Filters extends React.Component<IFiltersProps, IFiltersState> {
                     className="projects-dropdown"
                     options={this.state.repos}
                     placeholder="Select repositories..."
-                    autoComplete={"on"}
                 />
             </div>
         );

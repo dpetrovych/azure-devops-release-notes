@@ -14,7 +14,7 @@ import { RepositoryRef } from "../../data/repository";
 import { TagsService } from "../../data/services/TagService";
 import { CommitService } from "../../data/services/CommitService";
 import { Dropdown, IDropdownOption, Icon, Stack } from "@fluentui/react";
-import {  GitRef } from "azure-devops-extension-api/Git";
+import { GitRef } from "azure-devops-extension-api/Git";
 import { ReleaseNotesService } from "../../data/services/ReleaseNotesService";
 
 interface IReleaseNotesState {
@@ -157,10 +157,14 @@ export class ReleaseNotes extends React.Component<IReleaseNotesProps, IReleaseNo
         this.releaseNotesProvider.removeAll();
         this.setState({ selected: { key: selection.key as string } })
 
-        const commitIdFromSelectedTag = this.tags.find(tag => tag.objectId === this.state.selected.key)?.objectId!;
+        const selectedTag = this.tags.find(tag => tag.objectId === selection.key);
+        const commitIdFromAnnotatedTag = (await this.props.tagService.getAnnotatedTag(this.props.repostitory.id, selectedTag!.objectId)).taggedObject.objectId;
 
-        const commits = await this.props.commitService.getCommitsFromCommitId(this.props.repostitory.id, commitIdFromSelectedTag);
-        const releaseNotesIssues = await this.service.getReleaseNotesIssuesBasedOnTags(commits);
+        const commit = await this.props.commitService.getCommit(this.props.repostitory.id, commitIdFromAnnotatedTag);
+
+        const commits = [commit, ...await this.props.commitService.getCommitsFromTagName(this.props.repostitory.id, selection.text)];
+
+        const releaseNotesIssues = await this.service.getReleaseNotesIssuesBasedOnTags(this.props.repostitory.id, commits);
 
         this.issues = releaseNotesIssues;
         this.releaseNotesProvider.push(...releaseNotesIssues.map(releaseNoteIssue => issueToTableItem(releaseNoteIssue)));

@@ -1,4 +1,4 @@
-import { GitRestClient, PullRequestStatus, GitPullRequestSearchCriteria, GitCommitRef, GitPullRequest } from "azure-devops-extension-api/Git";
+import { GitRestClient, PullRequestStatus, GitPullRequestSearchCriteria, GitCommitRef, GitPullRequest, GitPullRequestQuery, GitPullRequestQueryType } from "azure-devops-extension-api/Git";
 import { WorkItemTrackingRestClient, WorkItem, WorkItemExpand, WorkItemErrorPolicy } from "azure-devops-extension-api/WorkItemTracking";
 import * as API from "azure-devops-extension-api";
 import { PullRequestRef, Issue } from "../releaseNotes";
@@ -61,29 +61,79 @@ export class ReleaseNotesService {
         return pullRequests.map(mapToPullRequestRef);
     }
 
-    async getReleaseNotes(repositoryId: string, pullRequestId: number): Promise<Issue[]> {
+    async getPullRequestsFromCommitIds(repositoryId: string, commitIds: string[]): Promise<GitPullRequest[]> {
+        const gitClient = API.getClient(GitRestClient);
+        const pullRequestQueryRequest = {
+            queries: [{
+                items: commitIds,
+                type: GitPullRequestQueryType.LastMergeCommit
+            }]
+        } as GitPullRequestQuery;
+        const pullRequestQuery = await gitClient.getPullRequestQuery(pullRequestQueryRequest, repositoryId);
+        const pullRequests = this.getPullRequestsFromQuery(pullRequestQuery);
+
+        return pullRequests;
+
+    }
+
+    private getPullRequestsFromQuery(pullRequestQuery: GitPullRequestQuery): GitPullRequest[] {
+        let pullRequestIds: GitPullRequest[] = [];
+        for (let i in pullRequestQuery.results) {
+            for (let j in pullRequestQuery.results[i]) {
+                for (let k in pullRequestQuery.results[i][j]) {
+                    pullRequestIds.push(pullRequestQuery.results[i][j][k])
+                }
+            }
+        }
+        return pullRequestIds;
+    }
+
+    async getWorkItemsFromPullRequestsAndCommits(repositoryId: string, pullRequests: GitPullRequest[]): Promise<WorkItem[]> {
         const gitClient = API.getClient(GitRestClient);
         const witClient = API.getClient(WorkItemTrackingRestClient);
 
-        const prWorkItems = await this.getPullRequestWorkItems(gitClient, repositoryId, pullRequestId);
-        const commentsWorkItems = await this.getCommentsWorkItems(gitClient, repositoryId, pullRequestId);
-        const workItemsIds = [...prWorkItems, ...commentsWorkItems].filter((v, i, a) => a.indexOf(v) === i);
+        let workItemNumbers: number[] = [];
+        for (let pullRequest of pullRequests) {
+            const pullRequestWorkItems = await this.getPullRequestWorkItems(gitClient, repositoryId, pullRequest.pullRequestId);
+            const commitsWorkItems = await this.getCommitsWorkItems(gitClient, repositoryId, pullRequest.pullRequestId);
 
-        const workItems = await this.getWorkItems(witClient, workItemsIds);
+            workItemNumbers = [...workItemNumbers, ...pullRequestWorkItems, ...commitsWorkItems].filter((v, i, a) => a.indexOf(v) === i);
+        }
 
-        return this.getReleaseNotesIssues(workItems, witClient);
+        if (workItemNumbers.length === 0) {
+            return [];
+        }
+        return await this.getWorkItems(witClient, workItemNumbers);
     }
 
-    async getReleaseNotesIssuesBasedOnTags(commits: GitCommitRef[]): Promise<Issue[]> {
+    async getReleaseNotesIssuesBasedOnTags(repositoryId: string, commits: GitCommitRef[]): Promise<Issue[]> {
         const witClient = API.getClient(WorkItemTrackingRestClient);
 
-        const commitsWorkItemsId = commits.flatMap(commit => commit.workItems.map(workItem => +workItem.id));
+        const commitsWithOutWorkItems = commits.filter(commit => commit.workItems.length === 0).map(commit => commit.commitId);
 
-        const workItems = await this.getWorkItems(witClient, commitsWorkItemsId);
+        let workItemIds: number[] = [...commits.flatMap(commit => commit.workItems.map(workItem => +workItem.id))];
+
+        if (commitsWithOutWorkItems.length > 0) {
+            const pullRequests = await this.getPullRequestsFromCommitIds(repositoryId, commitsWithOutWorkItems);
+            const workItemsFromPullRequests = await this.getWorkItemsFromPullRequestsAndCommits(repositoryId, pullRequests);
+            workItemIds = [
+                ...workItemIds,
+                ...workItemsFromPullRequests.map(workItem => workItem?.id)
+            ];
+        }
+
+        if (workItemIds.length === 0) {
+            return [];
+        }
+        console.log(workItemIds);
+        const workItems = await this.getWorkItems(witClient, workItemIds.filter(workItemId => workItemId != null));
 
         return this.getReleaseNotesIssues(workItems, witClient);
     }
-
+    private async getPullRequestWorkItems(gitClient: GitRestClient, repositoryId: string, pullRequestId: number): Promise<number[]> {
+        const workItemRefs = await gitClient.getPullRequestWorkItemRefs(repositoryId, pullRequestId);
+        return workItemRefs.map(w => Number(w.url.split('/').pop()));
+    }
     private async getReleaseNotesIssues(workItems: WorkItem[], witClient: WorkItemTrackingRestClient): Promise<Issue[]> {
 
         const isTask = (wit: WorkItem): boolean => wit.fields["System.WorkItemType"] === "Task";
@@ -117,17 +167,17 @@ export class ReleaseNotesService {
         });
     }
 
-    private async getPullRequestWorkItems(gitClient: GitRestClient, repositoryId: string, pullRequestId: number): Promise<number[]> {
-        const workItemRefs = await gitClient.getPullRequestWorkItemRefs(repositoryId, pullRequestId);
-        return workItemRefs.map(w => Number(w.url.split('/').pop()));
-    }
-
-    private async getCommentsWorkItems(gitClient: GitRestClient, repositoryId: string, pullRequestId: number): Promise<number[]> {
+    private async getCommitsWorkItems(gitClient: GitRestClient, repositoryId: string, pullRequestId: number): Promise<number[]> {
         const commitRefs = await gitClient.getPullRequestCommits(repositoryId, pullRequestId);
 
-        return commitRefs.map(c => {
-            const match = /\b#[0-9]+\b/.exec(c.comment);
-            return match ? match.map(x => Number(x)) : [];
-        }).reduce((c, a) => c.concat(a), []);
+        return commitRefs
+            .map(c => this.getWorkItemNumbersFromText(c.comment))
+            .reduce((c, a) => c.concat(a), []);
+    }
+
+    private getWorkItemNumbersFromText(text: string) {
+        const regex = /\d+/g;
+        const match = text.match(regex);
+        return match ? match.map(x => Number(x)) : [];
     }
 }

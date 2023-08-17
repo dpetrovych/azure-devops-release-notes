@@ -80,7 +80,7 @@ class App extends React.Component<{}, IAppState> {
                         </div>
                     )}>
 
-                    <p>Select repositories to be displayed</p>
+                    <Text variant="medium">Select repositories to be displayed</Text>
                     <Settings settingsService={this.settingsService} onChanged={this.onSettingsChanged} ref={s => (this.settings = s)} />
                 </Panel>
 
@@ -90,6 +90,15 @@ class App extends React.Component<{}, IAppState> {
                         title: "Email template",
                         type: DialogType.normal,
                     }}
+                    modalProps={
+                        {
+                            styles: {
+                                main: {
+                                    maxWidth: '100%'
+                                }
+                            }
+                        }
+                    }
                 >
                     <DialogFooter>
                         <PrimaryButton iconProps={{ "iconName": "Copy" }} text="Copy Content" onClick={copyEmailTemplate}></PrimaryButton>
